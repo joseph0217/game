@@ -1,3 +1,23 @@
+// 게임 상태 변수
+let gameState = 'start'; // 'start', 'colorSelect', 'playing', 'gameOver'
+let gameOver = false;
+let startTime = Date.now();
+let endTime = null;
+let canUseInvincibility = true; // 무적 쿨타임 체크
+let thirdPhase = false; // 3페이지 돌입 여부
+let playerColor = '#ffffff'; // 플레이어 기본 색상
+let restartTimer = null; // 재시작 타이머
+
+// 색상 선택 옵션
+const colorOptions = [
+    { name: '하늘색', value: '#00ffff' },
+    { name: '빨간색', value: '#ff0000' },
+    { name: '파란색', value: '#0000ff' },
+    { name: '초록색', value: '#00ff00' },
+    { name: '보라색', value: '#800080' }
+];
+let selectedColorIndex = 0;
+
 // 캔버스 설정
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -19,7 +39,16 @@ const player = {
     maxAmmo: 6, // 최대 탄약
     lastShotTime: Date.now(), // 마지막 발사 시간
     reloading: false, // 재장전 중인지 여부
-    reloadDots: 0 // 재장전 애니메이션 점 개수
+    reloadDots: 0, // 재장전 애니메이션 점 개수
+    invincible: false, // 무적 상태
+    invincibleTimer: 0, // 무적 시간
+    spaceInvincible: false, // 스페이스바 무적 상태
+    spaceInvincibleTimer: 0, // 스페이스바 무적 시간
+    flashToggle: false, // 깜빡임 효과
+    health: 5, // 플레이어 체력
+    maxHealth: 5, // 최대 체력
+    lastHitTime: 0, // 마지막으로 피해를 입은 시간
+    shotCount: 0 // 발사한 탄환 수 카운트
 };
 
 // 탄막 배열
@@ -43,6 +72,39 @@ const enemy = {
 // 키 입력 처리
 const keys = {};
 document.addEventListener('keydown', (e) => {
+    // 시작 화면에서 Enter 키를 누르면 색상 선택 화면으로
+    if (gameState === 'start' && e.key === 'Enter') {
+        gameState = 'colorSelect';
+        return;
+    }
+
+    // 색상 선택 화면에서의 키 입력 처리
+    if (gameState === 'colorSelect') {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+            selectedColorIndex = (selectedColorIndex - 1 + colorOptions.length) % colorOptions.length;
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+            selectedColorIndex = (selectedColorIndex + 1) % colorOptions.length;
+        } else if (e.key === 'Enter') {
+            playerColor = colorOptions[selectedColorIndex].value;
+            gameState = 'playing';
+            startTime = Date.now(); // 게임 시작 시간 초기화
+        }
+        return;
+    }
+
+    // 게임 오버 상태에서 Enter 키를 누르면 색상 선택으로 돌아감
+    if (gameState === 'gameOver' && e.key === 'Enter') {
+        gameState = 'colorSelect';
+        gameOver = false;
+        player.health = player.maxHealth;
+        enemy.health = 60;
+        enemy.reviving = false;
+        bullets = [];
+        enemyBullets = [];
+        player.x = canvas.width / 2;
+        player.y = canvas.height - 50;
+        return;
+    }
     keys[e.key] = true;
     if (e.key.toLowerCase() === 'r' && player.ammo < player.maxAmmo && !player.reloading) {
         player.reloading = true;
@@ -56,6 +118,18 @@ document.addEventListener('keydown', (e) => {
                 clearInterval(reloadInterval);
             }
         }, 200);
+    }
+
+    // 스페이스바로 무적 모드 활성화 (2페이지부터 + 쿨타임 체크)
+    if (gameState === 'playing' && e.code === 'Space' && !player.spaceInvincible && canUseInvincibility && enemy.health > 60) {
+        player.spaceInvincible = true;
+        player.spaceInvincibleTimer = 90; // 1.5초 무적
+        canUseInvincibility = false;
+
+        // 쿨다운 타이머 시작
+        setTimeout(() => {
+            canUseInvincibility = true;
+        }, 4500); // 무적 1.5초 + 쿨타임 3초 = 4.5초 후 다시 사용 가능
     }
 });
 document.addEventListener('keyup', (e) => keys[e.key] = false);
@@ -87,14 +161,19 @@ function createPlayerBullet() {
     const currentTime = Date.now();
     if (player.shooting && !player.reloading && player.ammo > 0 && 
         currentTime - player.lastShotTime >= 250) { // 0.25초 딜레이
+        player.shotCount++;
+        const isSpecialBullet = player.shotCount % 10 === 0;
+        const bulletDamage = enemy.health > 60 ? 20 : 10; // 2페이지에서 데미지 증가
+        
         bullets.push({
             x: player.x + player.width / 2,
             y: player.y + player.height / 2,
-            radius: 5,
+            radius: isSpecialBullet ? 7 : 5,
             speed: 7,
             dx: player.direction.x * 7,
             dy: player.direction.y * 7,
-            color: '#00ffff'
+            color: isSpecialBullet ? '#800080' : '#00ffff',
+            damage: isSpecialBullet ? bulletDamage * 1.5 : bulletDamage
         });
         player.ammo--;
         player.lastShotTime = currentTime;
@@ -172,7 +251,7 @@ function checkCollisions() {
         if (bullet.x > enemy.x && bullet.x < enemy.x + enemy.width &&
             bullet.y > enemy.y && bullet.y < enemy.y + enemy.height) {
             bullets.splice(index, 1);
-            enemy.health -= 10;
+            enemy.health -= bullet.damage;
             
             // 적의 체력이 0 이하가 되면 부활 패턴 시작
             if (enemy.health <= 0) {
@@ -196,9 +275,7 @@ function checkCollisions() {
                         setTimeout(() => {
                             enemy.reviving = false;
                             enemy.health = 500;
-                            // 원래 위치로 이동
-                            enemy.x = canvas.width / 2;
-                            enemy.y = 50;
+                            
                         }, 2500);
                     }
                 };
@@ -214,8 +291,20 @@ function checkCollisions() {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance < player.width / 2 + bullet.radius) {
-            // 게임 오버 로직 추가 예정
-            console.log('Hit!');
+            if (!player.invincible && !player.spaceInvincible) {
+                player.health--;
+                player.invincible = true;
+                player.invincibleTimer = 90;
+                player.lastHitTime = Date.now();
+                enemyBullets.splice(index, 1);
+
+                if (player.health <= 0) {
+                    gameOver = true;
+                    gameState = 'gameOver';
+                    endTime = Date.now();
+                    restartTimer = null;
+                }
+            }
         }
     });
 }
@@ -226,8 +315,63 @@ function draw() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 플레이어 그리기
-    ctx.fillStyle = '#fff';
+    // 시작 화면
+    if (gameState === 'start') {
+        ctx.fillStyle = '#fff';
+        ctx.font = '48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Start', canvas.width/2, canvas.height/2);
+        ctx.font = '24px Arial';
+        ctx.fillText('Press Enter to Start', canvas.width/2, canvas.height/2 + 50);
+        return;
+    }
+
+    // 색상 선택 화면
+    if (gameState === 'colorSelect') {
+        ctx.fillStyle = '#fff';
+        ctx.font = '36px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Select Your Color', canvas.width/2, 150);
+
+        colorOptions.forEach((color, index) => {
+            ctx.fillStyle = index === selectedColorIndex ? '#fff' : '#666';
+            ctx.font = '24px Arial';
+            ctx.fillText(color.name, canvas.width/2, 250 + index * 40);
+        });
+        return;
+    }
+
+    // 게임 오버 화면
+    if (gameState === 'gameOver') {
+        ctx.fillStyle = '#fff';
+        ctx.font = '48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2);
+        
+        // 플레이 시간 표시
+        const playTime = Math.floor((endTime - startTime) / 1000);
+        ctx.font = '24px Arial';
+        ctx.fillText(`플레이 시간: ${playTime}초`, canvas.width/2, canvas.height/2 + 50);
+
+        // 2초 후에 재시작 메시지 표시
+        if (!restartTimer) {
+            restartTimer = setTimeout(() => {
+                ctx.font = '32px Arial';
+                ctx.fillText('Re Start...?', canvas.width/2, canvas.height/2 + 100);
+                ctx.font = '20px Arial';
+                ctx.fillText('Press Enter to Restart', canvas.width/2, canvas.height/2 + 140);
+            }, 2000);
+        }
+        return;
+    }
+
+    // 플레이어 그리기 (무적 상태일 때 깜빡임 효과)
+    if (player.invincible) {
+        player.flashToggle = !player.flashToggle;
+        ctx.fillStyle = player.flashToggle ? '#ffff00' : playerColor;
+    } else {
+        ctx.fillStyle = playerColor;
+    }
     ctx.fillRect(player.x, player.y, player.width, player.height);
 
     // 적 그리기
@@ -255,17 +399,86 @@ function draw() {
     // 적 체력 표시
     ctx.fillStyle = '#fff';
     ctx.font = '20px Arial';
+    ctx.textAlign = 'left';
     ctx.fillText(`Enemy HP: ${enemy.health}`, 10, 30);
     ctx.fillText(`Ammo: ${player.ammo}/${player.maxAmmo}${player.reloading ? ' (Reloading' + '.'.repeat(player.reloadDots) + ')' : ''}`, 10, 60);
+
+    // 무적 상태 표시
+    if (player.invincible) {
+        ctx.fillStyle = '#00ffff';
+        ctx.textAlign = 'right';
+        ctx.fillText('Invincibility Active', canvas.width - 20, 30);
+    }
+
+    // 플레이어 체력(하트) 그리기
+    const heartSize = 20;
+    const heartSpacing = 25;
+    const heartY = 90;
+    
+    for (let i = 0; i < player.maxHealth; i++) {
+        const heartX = 10 + i * heartSpacing;
+        const isFull = i < player.health;
+        
+        // 하트 그리기
+        ctx.beginPath();
+        ctx.moveTo(heartX + heartSize/2, heartY + heartSize/4);
+        
+        // 왼쪽 곡선
+        ctx.bezierCurveTo(
+            heartX + heartSize/2, heartY,
+            heartX, heartY,
+            heartX, heartY + heartSize/4
+        );
+        
+        ctx.bezierCurveTo(
+            heartX, heartY + heartSize/2,
+            heartX + heartSize/2, heartY + heartSize,
+            heartX + heartSize/2, heartY + heartSize
+        );
+        
+        // 오른쪽 곡선
+        ctx.bezierCurveTo(
+            heartX + heartSize/2, heartY + heartSize,
+            heartX + heartSize, heartY + heartSize/2,
+            heartX + heartSize, heartY + heartSize/4
+        );
+        
+        ctx.bezierCurveTo(
+            heartX + heartSize, heartY,
+            heartX + heartSize/2, heartY,
+            heartX + heartSize/2, heartY + heartSize/4
+        );
+        
+        ctx.fillStyle = isFull ? playerColor : '#4d0000';
+        ctx.fill();
+        ctx.closePath();
+    }
 }
 
 // 게임 루프
 function gameLoop() {
-    movePlayer();
-    createPlayerBullet();
-    createEnemyBullets();
-    updateBullets();
-    checkCollisions();
+    if (gameState === 'playing') {
+        movePlayer();
+        createPlayerBullet();
+        createEnemyBullets();
+        updateBullets();
+        checkCollisions();
+
+        // 무적 타이머 업데이트
+        if (player.invincible) {
+            player.invincibleTimer--;
+            if (player.invincibleTimer <= 0) {
+                player.invincible = false;
+            }
+        }
+        if (player.spaceInvincible) {
+            player.spaceInvincibleTimer--;
+            if (player.spaceInvincibleTimer <= 0) {
+                player.spaceInvincible = false;
+            }
+        }
+    }
+
     draw();
     requestAnimationFrame(gameLoop);
 }
