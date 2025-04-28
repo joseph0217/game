@@ -48,7 +48,8 @@ const player = {
     health: 5, // 플레이어 체력
     maxHealth: 5, // 최대 체력
     lastHitTime: 0, // 마지막으로 피해를 입은 시간
-    shotCount: 0 // 발사한 탄환 수 카운트
+    shotCount: 0, // 발사한 탄환 수 카운트
+    healCount: 3 // 남은 회복 횟수
 };
 
 // 탄막 배열
@@ -78,6 +79,12 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
+    // B키로 체력 회복
+    if (gameState === 'playing' && e.key.toLowerCase() === 'b' && player.healCount > 0 && player.health < player.maxHealth) {
+        player.health = Math.min(player.health + 3, player.maxHealth);
+        player.healCount--;
+    }
+
     // 색상 선택 화면에서의 키 입력 처리
     if (gameState === 'colorSelect') {
         if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
@@ -92,17 +99,20 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
-    // 게임 오버 상태에서 Enter 키를 누르면 색상 선택으로 돌아감
+    // 게임 오버 상태에서 Enter 키를 누르면 게임 재시작
     if (gameState === 'gameOver' && e.key === 'Enter') {
-        gameState = 'colorSelect';
+        gameState = 'playing';
         gameOver = false;
         player.health = player.maxHealth;
+        player.healCount = 3;
+        player.shotCount = 0;
         enemy.health = 60;
         enemy.reviving = false;
         bullets = [];
         enemyBullets = [];
         player.x = canvas.width / 2;
         player.y = canvas.height - 50;
+        startTime = Date.now();
         return;
     }
     keys[e.key] = true;
@@ -162,7 +172,7 @@ function createPlayerBullet() {
     if (player.shooting && !player.reloading && player.ammo > 0 && 
         currentTime - player.lastShotTime >= 250) { // 0.25초 딜레이
         player.shotCount++;
-        const isSpecialBullet = player.shotCount % 10 === 0;
+        const isSpecialBullet = player.shotCount % 6 === 0;
         const bulletDamage = enemy.health > 60 ? 20 : 10; // 2페이지에서 데미지 증가
         
         bullets.push({
@@ -346,22 +356,9 @@ function draw() {
         ctx.fillStyle = '#fff';
         ctx.font = '48px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2);
-        
-        // 플레이 시간 표시
-        const playTime = Math.floor((endTime - startTime) / 1000);
+        ctx.fillText('Re Start...?', canvas.width/2, canvas.height/2);
         ctx.font = '24px Arial';
-        ctx.fillText(`플레이 시간: ${playTime}초`, canvas.width/2, canvas.height/2 + 50);
-
-        // 2초 후에 재시작 메시지 표시
-        if (!restartTimer) {
-            restartTimer = setTimeout(() => {
-                ctx.font = '32px Arial';
-                ctx.fillText('Re Start...?', canvas.width/2, canvas.height/2 + 100);
-                ctx.font = '20px Arial';
-                ctx.fillText('Press Enter to Restart', canvas.width/2, canvas.height/2 + 140);
-            }, 2000);
-        }
+        ctx.fillText('Press Enter to Restart', canvas.width/2, canvas.height/2 + 50);
         return;
     }
 
@@ -414,6 +411,51 @@ function draw() {
     const heartSize = 20;
     const heartSpacing = 25;
     const heartY = 90;
+
+    // 회복 아이템 하트 그리기
+    const healHeartY = canvas.height - 40;
+    for (let i = 0; i < player.healCount; i++) {
+        const healHeartX = 10 + i * heartSpacing;
+        
+        ctx.beginPath();
+        ctx.moveTo(healHeartX + heartSize/2, healHeartY + heartSize/4);
+        
+        ctx.bezierCurveTo(
+            healHeartX + heartSize/2, healHeartY,
+            healHeartX, healHeartY,
+            healHeartX, healHeartY + heartSize/4
+        );
+        
+        ctx.bezierCurveTo(
+            healHeartX, healHeartY + heartSize/2,
+            healHeartX + heartSize/2, healHeartY + heartSize,
+            healHeartX + heartSize/2, healHeartY + heartSize
+        );
+        
+        ctx.bezierCurveTo(
+            healHeartX + heartSize/2, healHeartY + heartSize,
+            healHeartX + heartSize, healHeartY + heartSize/2,
+            healHeartX + heartSize, healHeartY + heartSize/4
+        );
+        
+        ctx.bezierCurveTo(
+            healHeartX + heartSize, healHeartY,
+            healHeartX + heartSize/2, healHeartY,
+            healHeartX + heartSize/2, healHeartY + heartSize/4
+        );
+        
+        ctx.fillStyle = '#ff69b4';
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    // B키 안내 텍스트
+    if (player.healCount > 0) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('Press B to Heal', 10, canvas.height - 10);
+    }
     
     for (let i = 0; i < player.maxHealth; i++) {
         const heartX = 10 + i * heartSpacing;
