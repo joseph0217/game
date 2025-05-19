@@ -8,6 +8,17 @@ let thirdPhase = false; // 3페이지 돌입 여부
 let playerColor = '#ffffff'; // 플레이어 기본 색상
 let restartTimer = null; // 재시작 타이머
 
+// 조이스틱 상태
+let moveJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
+let shootJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
+let healJoystick = { active: false, startX: 0, startY: 0 };
+
+// 조이스틱 영역 설정
+const joystickRadius = 50;
+const moveJoystickPos = { x: 100, y: window.innerHeight - 100 };
+const shootJoystickPos = { x: window.innerWidth - 200, y: window.innerHeight - 100 };
+const healJoystickPos = { x: window.innerWidth - 80, y: window.innerHeight - 100 };
+
 // 이미지 로딩
 const dungeonImage = new Image();
 const endImage = new Image();
@@ -86,8 +97,87 @@ const enemy = {
     fireAngle: 0
 };
 
-// 키 입력 처리
+// 키 입력 및 터치 이벤트 처리
 const keys = {};
+
+// 터치 이벤트 처리
+canvas.addEventListener('touchstart', handleTouchStart);
+canvas.addEventListener('touchmove', handleTouchMove);
+canvas.addEventListener('touchend', handleTouchEnd);
+
+function handleTouchStart(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    // 이동 조이스틱
+    if (distance(x, y, moveJoystickPos.x, moveJoystickPos.y) < joystickRadius) {
+        moveJoystick.active = true;
+        moveJoystick.startX = x;
+        moveJoystick.startY = y;
+    }
+    // 발사 조이스틱
+    else if (distance(x, y, shootJoystickPos.x, shootJoystickPos.y) < joystickRadius) {
+        shootJoystick.active = true;
+        shootJoystick.startX = x;
+        shootJoystick.startY = y;
+    }
+    // 회복 조이스틱
+    else if (distance(x, y, healJoystickPos.x, healJoystickPos.y) < joystickRadius) {
+        healJoystick.active = true;
+        if (player.healCount > 0 && player.health < player.maxHealth) {
+            player.health = Math.min(player.health + 3, player.maxHealth);
+            player.healCount--;
+        }
+    }
+}
+
+function handleTouchMove(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    if (moveJoystick.active) {
+        moveJoystick.moveX = x - moveJoystick.startX;
+        moveJoystick.moveY = y - moveJoystick.startY;
+        const dist = Math.sqrt(moveJoystick.moveX ** 2 + moveJoystick.moveY ** 2);
+        if (dist > joystickRadius) {
+            moveJoystick.moveX *= joystickRadius / dist;
+            moveJoystick.moveY *= joystickRadius / dist;
+        }
+    }
+    if (shootJoystick.active) {
+        shootJoystick.moveX = x - shootJoystick.startX;
+        shootJoystick.moveY = y - shootJoystick.startY;
+        const dist = Math.sqrt(shootJoystick.moveX ** 2 + shootJoystick.moveY ** 2);
+        if (dist > joystickRadius) {
+            shootJoystick.moveX *= joystickRadius / dist;
+            shootJoystick.moveY *= joystickRadius / dist;
+        }
+        player.shooting = true;
+        player.direction = {
+            x: shootJoystick.moveX / Math.sqrt(shootJoystick.moveX ** 2 + shootJoystick.moveY ** 2),
+            y: shootJoystick.moveY / Math.sqrt(shootJoystick.moveX ** 2 + shootJoystick.moveY ** 2)
+        };
+    }
+}
+
+function handleTouchEnd(e) {
+    e.preventDefault();
+    moveJoystick.active = false;
+    shootJoystick.active = false;
+    healJoystick.active = false;
+    player.shooting = false;
+}
+
+function distance(x1, y1, x2, y2) {
+    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+}
+
 document.addEventListener('keydown', (e) => {
     // 시작 화면에서 Enter 키를 누르면 색상 선택 화면으로
     if (gameState === 'start' && e.key === 'Enter') {
@@ -162,6 +252,21 @@ document.addEventListener('keyup', (e) => keys[e.key] = false);
 
 // 플레이어 이동
 function movePlayer() {
+    // 터치 조이스틱으로 이동
+    if (moveJoystick.active) {
+        const normalizedX = moveJoystick.moveX / joystickRadius;
+        const normalizedY = moveJoystick.moveY / joystickRadius;
+        
+        if (player.x + normalizedX * player.speed > 0 && 
+            player.x + normalizedX * player.speed < canvas.width - player.width) {
+            player.x += normalizedX * player.speed;
+        }
+        if (player.y + normalizedY * player.speed > 0 && 
+            player.y + normalizedY * player.speed < canvas.height - player.height) {
+            player.y += normalizedY * player.speed;
+        }
+    }
+    // 키보드 입력으로 이동
     if (keys['ArrowLeft'] && player.x > 0) {
         player.x -= player.speed;
         player.direction = { x: -1, y: 0 };
@@ -339,6 +444,27 @@ function checkCollisions() {
 
 
 function draw() {
+    // 조이스틱 그리기 함수
+    function drawJoystick(baseX, baseY, active, moveX, moveY) {
+        ctx.beginPath();
+        ctx.arc(baseX, baseY, joystickRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        if (active) {
+            ctx.beginPath();
+            ctx.arc(baseX + moveX, baseY + moveY, joystickRadius / 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff80';
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.arc(baseX, baseY, joystickRadius / 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff40';
+            ctx.fill();
+        }
+    }
+
     // 화면 클리어
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -435,6 +561,30 @@ function draw() {
     const heartSize = 20;
     const heartSpacing = 25;
     const heartY = 90;
+
+    // 조이스틱 그리기
+    if (gameState === 'playing') {
+        drawJoystick(moveJoystickPos.x, moveJoystickPos.y, moveJoystick.active, moveJoystick.moveX, moveJoystick.moveY);
+        drawJoystick(shootJoystickPos.x, shootJoystickPos.y, shootJoystick.active, shootJoystick.moveX, shootJoystick.moveY);
+        
+        // 회복 조이스틱
+        ctx.beginPath();
+        ctx.arc(healJoystickPos.x, healJoystickPos.y, joystickRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ff69b4';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(healJoystickPos.x, healJoystickPos.y, joystickRadius / 2, 0, Math.PI * 2);
+        ctx.fillStyle = healJoystick.active ? '#ff69b480' : '#ff69b440';
+        ctx.fill();
+
+        // 회복 아이콘
+        ctx.fillStyle = '#ff69b4';
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('❤', healJoystickPos.x, healJoystickPos.y + 8);
+    }
 
     // 회복 아이템 하트 그리기
     const healHeartY = canvas.height - 40;
