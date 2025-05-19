@@ -8,6 +8,22 @@ let thirdPhase = false; // 3페이지 돌입 여부
 let playerColor = '#ffffff'; // 플레이어 기본 색상
 let restartTimer = null; // 재시작 타이머
 
+// 이미지 로딩
+const dungeonImage = new Image();
+const endImage = new Image();
+let dungeonImageLoaded = false;
+let endImageLoaded = false;
+
+dungeonImage.onload = function() {
+    dungeonImageLoaded = true;
+};
+endImage.onload = function() {
+    endImageLoaded = true;
+};
+
+dungeonImage.src = '던전.png';
+endImage.src = '끝.png';
+
 // 색상 선택 옵션
 const colorOptions = [
     { name: '하늘색', value: '#00ffff' },
@@ -320,11 +336,7 @@ function checkCollisions() {
 }
 
 // 그리기 함수
-// 배경 이미지와 게임 오버 이미지 로드
-const dungeonImage = new Image();
-dungeonImage.src = '던전.png';
-const endImage = new Image();
-endImage.src = '끝.png';
+
 
 function draw() {
     // 화면 클리어
@@ -332,7 +344,7 @@ function draw() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // 게임 플레이 중일 때 던전 배경 표시
-    if (gameState === 'playing') {
+    if (gameState === 'playing' && dungeonImageLoaded) {
         ctx.drawImage(dungeonImage, 0, 0, canvas.width, canvas.height);
     }
 
@@ -363,7 +375,7 @@ function draw() {
     }
 
     // 게임 오버 화면
-    if (gameState === 'gameOver') {
+    if (gameState === 'gameOver' && endImageLoaded) {
         ctx.drawImage(endImage, 0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#fff';
         ctx.font = '48px Arial';
