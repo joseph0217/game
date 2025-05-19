@@ -112,6 +112,52 @@ actionJoystickElem.addEventListener('touchstart', handleActionJoystickStart);
 actionJoystickElem.addEventListener('touchmove', handleActionJoystickMove);
 actionJoystickElem.addEventListener('touchend', handleJoystickEnd);
 
+// 캔버스 터치 이벤트 처리
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    // 시작 화면에서 터치하면 색상 선택 화면으로
+    if (gameState === 'start') {
+        gameState = 'colorSelect';
+        return;
+    }
+
+    // 색상 선택 화면에서 색상을 터치하면 게임 시작
+    if (gameState === 'colorSelect') {
+        const colorY = y - 250;
+        if (colorY >= 0) {
+            const selectedIndex = Math.floor(colorY / 40);
+            if (selectedIndex >= 0 && selectedIndex < colorOptions.length) {
+                selectedColorIndex = selectedIndex;
+                playerColor = colorOptions[selectedColorIndex].value;
+                gameState = 'playing';
+                startTime = Date.now();
+            }
+        }
+        return;
+    }
+
+    // 게임 오버 화면에서 터치하면 재시작
+    if (gameState === 'gameOver') {
+        gameState = 'playing';
+        gameOver = false;
+        player.health = player.maxHealth;
+        player.healCount = 3;
+        player.shotCount = 0;
+        enemy.health = 60;
+        enemy.reviving = false;
+        bullets = [];
+        enemyBullets = [];
+        player.x = canvas.width / 2;
+        player.y = canvas.height - 50;
+        startTime = Date.now();
+    }
+});
+
 function handleMoveJoystickStart(e) {
     e.preventDefault();
     const touch = e.touches[0];
