@@ -320,10 +320,21 @@ function checkCollisions() {
 }
 
 // 그리기 함수
+// 배경 이미지와 게임 오버 이미지 로드
+const dungeonImage = new Image();
+dungeonImage.src = '던전.png';
+const endImage = new Image();
+endImage.src = '끝.png';
+
 function draw() {
     // 화면 클리어
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 게임 플레이 중일 때 던전 배경 표시
+    if (gameState === 'playing') {
+        ctx.drawImage(dungeonImage, 0, 0, canvas.width, canvas.height);
+    }
 
     // 시작 화면
     if (gameState === 'start') {
@@ -353,6 +364,7 @@ function draw() {
 
     // 게임 오버 화면
     if (gameState === 'gameOver') {
+        ctx.drawImage(endImage, 0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#fff';
         ctx.font = '48px Arial';
         ctx.textAlign = 'center';
