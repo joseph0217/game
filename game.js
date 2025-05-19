@@ -8,16 +8,19 @@ let thirdPhase = false; // 3페이지 돌입 여부
 let playerColor = '#ffffff'; // 플레이어 기본 색상
 let restartTimer = null; // 재시작 타이머
 
+// 조이스틱 요소
+const moveJoystickElem = document.getElementById('moveJoystick');
+const actionJoystickElem = document.getElementById('actionJoystick');
+const moveKnob = moveJoystickElem.querySelector('.joystick-knob');
+const actionKnob = actionJoystickElem.querySelector('.joystick-knob');
+
 // 조이스틱 상태
 let moveJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
-let shootJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
-let healJoystick = { active: false, startX: 0, startY: 0 };
+let actionJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
 
-// 조이스틱 영역 설정
-const joystickRadius = 50;
-const moveJoystickPos = { x: 100, y: window.innerHeight - 100 };
-const shootJoystickPos = { x: window.innerWidth - 200, y: window.innerHeight - 100 };
-const healJoystickPos = { x: window.innerWidth - 80, y: window.innerHeight - 100 };
+// 조이스틱 설정
+const joystickRadius = 40;
+const knobRadius = 16;
 
 // 이미지 로딩
 const dungeonImage = new Image();
@@ -101,77 +104,95 @@ const enemy = {
 const keys = {};
 
 // 터치 이벤트 처리
-canvas.addEventListener('touchstart', handleTouchStart);
-canvas.addEventListener('touchmove', handleTouchMove);
-canvas.addEventListener('touchend', handleTouchEnd);
+moveJoystickElem.addEventListener('touchstart', handleMoveJoystickStart);
+moveJoystickElem.addEventListener('touchmove', handleMoveJoystickMove);
+moveJoystickElem.addEventListener('touchend', handleJoystickEnd);
 
-function handleTouchStart(e) {
+actionJoystickElem.addEventListener('touchstart', handleActionJoystickStart);
+actionJoystickElem.addEventListener('touchmove', handleActionJoystickMove);
+actionJoystickElem.addEventListener('touchend', handleJoystickEnd);
+
+function handleMoveJoystickStart(e) {
     e.preventDefault();
     const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-
-    // 이동 조이스틱
-    if (distance(x, y, moveJoystickPos.x, moveJoystickPos.y) < joystickRadius) {
-        moveJoystick.active = true;
-        moveJoystick.startX = x;
-        moveJoystick.startY = y;
-    }
-    // 발사 조이스틱
-    else if (distance(x, y, shootJoystickPos.x, shootJoystickPos.y) < joystickRadius) {
-        shootJoystick.active = true;
-        shootJoystick.startX = x;
-        shootJoystick.startY = y;
-    }
-    // 회복 조이스틱
-    else if (distance(x, y, healJoystickPos.x, healJoystickPos.y) < joystickRadius) {
-        healJoystick.active = true;
-        if (player.healCount > 0 && player.health < player.maxHealth) {
-            player.health = Math.min(player.health + 3, player.maxHealth);
-            player.healCount--;
-        }
-    }
+    const rect = moveJoystickElem.getBoundingClientRect();
+    moveJoystick.active = true;
+    moveJoystick.startX = touch.clientX - rect.left;
+    moveJoystick.startY = touch.clientY - rect.top;
 }
 
-function handleTouchMove(e) {
+function handleActionJoystickStart(e) {
     e.preventDefault();
     const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+    const rect = actionJoystickElem.getBoundingClientRect();
+    actionJoystick.active = true;
+    actionJoystick.startX = touch.clientX - rect.left;
+    actionJoystick.startY = touch.clientY - rect.top;
+    player.shooting = true;
+}
 
+function handleMoveJoystickMove(e) {
+    e.preventDefault();
+    if (!moveJoystick.active) return;
+    
+    const touch = e.touches[0];
+    const rect = moveJoystickElem.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    moveJoystick.moveX = (touch.clientX - rect.left - centerX) / joystickRadius;
+    moveJoystick.moveY = (touch.clientY - rect.top - centerY) / joystickRadius;
+    
+    const dist = Math.sqrt(moveJoystick.moveX ** 2 + moveJoystick.moveY ** 2);
+    if (dist > 1) {
+        moveJoystick.moveX /= dist;
+        moveJoystick.moveY /= dist;
+    }
+    
+    moveKnob.style.transform = `translate(${moveJoystick.moveX * joystickRadius}px, ${moveJoystick.moveY * joystickRadius}px)`;
+}
+
+function handleActionJoystickMove(e) {
+    e.preventDefault();
+    if (!actionJoystick.active) return;
+    
+    const touch = e.touches[0];
+    const rect = actionJoystickElem.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    actionJoystick.moveX = (touch.clientX - rect.left - centerX) / joystickRadius;
+    actionJoystick.moveY = (touch.clientY - rect.top - centerY) / joystickRadius;
+    
+    const dist = Math.sqrt(actionJoystick.moveX ** 2 + actionJoystick.moveY ** 2);
+    if (dist > 1) {
+        actionJoystick.moveX /= dist;
+        actionJoystick.moveY /= dist;
+    }
+    
+    actionKnob.style.transform = `translate(${actionJoystick.moveX * joystickRadius}px, ${actionJoystick.moveY * joystickRadius}px)`;
+    
+    player.direction = {
+        x: actionJoystick.moveX,
+        y: actionJoystick.moveY
+    };
+}
+
+function handleJoystickEnd(e) {
+    e.preventDefault();
     if (moveJoystick.active) {
-        moveJoystick.moveX = x - moveJoystick.startX;
-        moveJoystick.moveY = y - moveJoystick.startY;
-        const dist = Math.sqrt(moveJoystick.moveX ** 2 + moveJoystick.moveY ** 2);
-        if (dist > joystickRadius) {
-            moveJoystick.moveX *= joystickRadius / dist;
-            moveJoystick.moveY *= joystickRadius / dist;
-        }
+        moveJoystick.active = false;
+        moveJoystick.moveX = 0;
+        moveJoystick.moveY = 0;
+        moveKnob.style.transform = 'translate(0, 0)';
     }
-    if (shootJoystick.active) {
-        shootJoystick.moveX = x - shootJoystick.startX;
-        shootJoystick.moveY = y - shootJoystick.startY;
-        const dist = Math.sqrt(shootJoystick.moveX ** 2 + shootJoystick.moveY ** 2);
-        if (dist > joystickRadius) {
-            shootJoystick.moveX *= joystickRadius / dist;
-            shootJoystick.moveY *= joystickRadius / dist;
-        }
-        player.shooting = true;
-        player.direction = {
-            x: shootJoystick.moveX / Math.sqrt(shootJoystick.moveX ** 2 + shootJoystick.moveY ** 2),
-            y: shootJoystick.moveY / Math.sqrt(shootJoystick.moveX ** 2 + shootJoystick.moveY ** 2)
-        };
+    if (actionJoystick.active) {
+        actionJoystick.active = false;
+        actionJoystick.moveX = 0;
+        actionJoystick.moveY = 0;
+        actionKnob.style.transform = 'translate(0, 0)';
+        player.shooting = false;
     }
-}
-
-function handleTouchEnd(e) {
-    e.preventDefault();
-    moveJoystick.active = false;
-    shootJoystick.active = false;
-    healJoystick.active = false;
-    player.shooting = false;
 }
 
 function distance(x1, y1, x2, y2) {
@@ -260,10 +281,12 @@ function movePlayer() {
         if (player.x + normalizedX * player.speed > 0 && 
             player.x + normalizedX * player.speed < canvas.width - player.width) {
             player.x += normalizedX * player.speed;
+            if (normalizedX !== 0) player.direction = { x: Math.sign(normalizedX), y: 0 };
         }
         if (player.y + normalizedY * player.speed > 0 && 
             player.y + normalizedY * player.speed < canvas.height - player.height) {
             player.y += normalizedY * player.speed;
+            if (normalizedY !== 0) player.direction = { x: 0, y: Math.sign(normalizedY) };
         }
     }
     // 키보드 입력으로 이동
@@ -283,7 +306,7 @@ function movePlayer() {
         player.y += player.speed;
         player.direction = { x: 0, y: 1 };
     }
-    if (keys['z']) player.shooting = true;
+    if (keys['z'] || actionJoystick.active) player.shooting = true;
     else player.shooting = false;
 }
 
