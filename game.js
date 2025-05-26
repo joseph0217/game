@@ -1,5 +1,6 @@
 // 게임 상태 변수
-let gameState = 'start'; // 'start', 'colorSelect', 'playing', 'gameOver'
+let gameState = 'start'; // 'start', 'platformSelect', 'colorSelect', 'playing', 'gameOver'
+let platform = ''; // 'mobile' 또는 'pc'
 let gameOver = false;
 let startTime = Date.now();
 let endTime = null;
@@ -9,14 +10,14 @@ let playerColor = '#ffffff'; // 플레이어 기본 색상
 let restartTimer = null; // 재시작 타이머
 
 // 조이스틱 요소
-const moveJoystickElem = document.getElementById('moveJoystick');
-const actionJoystickElem = document.getElementById('actionJoystick');
+const shootJoystickElem = document.getElementById('moveJoystick');
+const moveJoystickElem = document.getElementById('actionJoystick');
+const shootKnob = shootJoystickElem.querySelector('.joystick-knob');
 const moveKnob = moveJoystickElem.querySelector('.joystick-knob');
-const actionKnob = actionJoystickElem.querySelector('.joystick-knob');
 
 // 조이스틱 상태
+let shootJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
 let moveJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
-let actionJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
 
 // 조이스틱 설정
 const joystickRadius = 40;
@@ -104,13 +105,13 @@ const enemy = {
 const keys = {};
 
 // 터치 이벤트 처리
+shootJoystickElem.addEventListener('touchstart', handleShootJoystickStart);
+shootJoystickElem.addEventListener('touchmove', handleShootJoystickMove);
+shootJoystickElem.addEventListener('touchend', handleJoystickEnd);
+
 moveJoystickElem.addEventListener('touchstart', handleMoveJoystickStart);
 moveJoystickElem.addEventListener('touchmove', handleMoveJoystickMove);
 moveJoystickElem.addEventListener('touchend', handleJoystickEnd);
-
-actionJoystickElem.addEventListener('touchstart', handleActionJoystickStart);
-actionJoystickElem.addEventListener('touchmove', handleActionJoystickMove);
-actionJoystickElem.addEventListener('touchend', handleJoystickEnd);
 
 // 캔버스 터치 이벤트 처리
 canvas.addEventListener('touchstart', (e) => {
@@ -167,13 +168,13 @@ function handleMoveJoystickStart(e) {
     moveJoystick.startY = touch.clientY - rect.top;
 }
 
-function handleActionJoystickStart(e) {
+function handleShootJoystickStart(e) {
     e.preventDefault();
     const touch = e.touches[0];
-    const rect = actionJoystickElem.getBoundingClientRect();
-    actionJoystick.active = true;
-    actionJoystick.startX = touch.clientX - rect.left;
-    actionJoystick.startY = touch.clientY - rect.top;
+    const rect = shootJoystickElem.getBoundingClientRect();
+    shootJoystick.active = true;
+    shootJoystick.startX = touch.clientX - rect.left;
+    shootJoystick.startY = touch.clientY - rect.top;
     player.shooting = true;
 }
 
@@ -198,29 +199,29 @@ function handleMoveJoystickMove(e) {
     moveKnob.style.transform = `translate(${moveJoystick.moveX * joystickRadius}px, ${moveJoystick.moveY * joystickRadius}px)`;
 }
 
-function handleActionJoystickMove(e) {
+function handleShootJoystickMove(e) {
     e.preventDefault();
-    if (!actionJoystick.active) return;
+    if (!shootJoystick.active) return;
     
     const touch = e.touches[0];
-    const rect = actionJoystickElem.getBoundingClientRect();
+    const rect = shootJoystickElem.getBoundingClientRect();
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
     
-    actionJoystick.moveX = (touch.clientX - rect.left - centerX) / joystickRadius;
-    actionJoystick.moveY = (touch.clientY - rect.top - centerY) / joystickRadius;
+    shootJoystick.moveX = (touch.clientX - rect.left - centerX) / joystickRadius;
+    shootJoystick.moveY = (touch.clientY - rect.top - centerY) / joystickRadius;
     
-    const dist = Math.sqrt(actionJoystick.moveX ** 2 + actionJoystick.moveY ** 2);
+    const dist = Math.sqrt(shootJoystick.moveX ** 2 + shootJoystick.moveY ** 2);
     if (dist > 1) {
-        actionJoystick.moveX /= dist;
-        actionJoystick.moveY /= dist;
+        shootJoystick.moveX /= dist;
+        shootJoystick.moveY /= dist;
     }
     
-    actionKnob.style.transform = `translate(${actionJoystick.moveX * joystickRadius}px, ${actionJoystick.moveY * joystickRadius}px)`;
+    shootKnob.style.transform = `translate(${shootJoystick.moveX * joystickRadius}px, ${shootJoystick.moveY * joystickRadius}px)`;
     
     player.direction = {
-        x: actionJoystick.moveX,
-        y: actionJoystick.moveY
+        x: shootJoystick.moveX,
+        y: shootJoystick.moveY
     };
 }
 
@@ -232,11 +233,11 @@ function handleJoystickEnd(e) {
         moveJoystick.moveY = 0;
         moveKnob.style.transform = 'translate(0, 0)';
     }
-    if (actionJoystick.active) {
-        actionJoystick.active = false;
-        actionJoystick.moveX = 0;
-        actionJoystick.moveY = 0;
-        actionKnob.style.transform = 'translate(0, 0)';
+    if (shootJoystick.active) {
+        shootJoystick.active = false;
+        shootJoystick.moveX = 0;
+        shootJoystick.moveY = 0;
+        shootKnob.style.transform = 'translate(0, 0)';
         player.shooting = false;
     }
 }
@@ -246,8 +247,20 @@ function distance(x1, y1, x2, y2) {
 }
 
 document.addEventListener('keydown', (e) => {
-    // 시작 화면에서 Enter 키를 누르면 색상 선택 화면으로
-    if (gameState === 'start' && e.key === 'Enter') {
+    // 시작 화면에서 플랫폼 선택
+    if (gameState === 'start') {
+        if (e.key === 'ArrowLeft') {
+            platform = 'mobile';
+            gameState = 'platformSelect';
+        } else if (e.key === 'ArrowRight') {
+            platform = 'pc';
+            gameState = 'platformSelect';
+        }
+        return;
+    }
+
+    // 플랫폼 선택 화면에서 Enter 키를 누르면 색상 선택 화면으로
+    if (gameState === 'platformSelect' && e.key === 'Enter') {
         gameState = 'colorSelect';
         return;
     }
@@ -352,7 +365,7 @@ function movePlayer() {
         player.y += player.speed;
         player.direction = { x: 0, y: 1 };
     }
-    if (keys['z'] || actionJoystick.active) player.shooting = true;
+    if (keys['z'] || shootJoystick.active) player.shooting = true;
     else player.shooting = false;
 }
 
@@ -546,9 +559,26 @@ function draw() {
         ctx.fillStyle = '#fff';
         ctx.font = '48px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Game Start', canvas.width/2, canvas.height/2);
+        ctx.fillText('플랫폼을 선택하세요', canvas.width/2, canvas.height/2 - 50);
+        ctx.font = '36px Arial';
+        ctx.fillStyle = '#00ffff';
+        ctx.fillText('모바일', canvas.width/2 - 100, canvas.height/2 + 50);
+        ctx.fillText('PC', canvas.width/2 + 100, canvas.height/2 + 50);
+        return;
+    }
+
+    // 플랫폼 선택 화면
+    if (gameState === 'platformSelect') {
+        ctx.fillStyle = '#fff';
+        ctx.font = '36px Arial';
+        ctx.textAlign = 'center';
+        if (platform === 'mobile') {
+            ctx.fillText('모바일 조작: 조이스틱으로 이동과 공격', canvas.width/2, canvas.height/2);
+        } else {
+            ctx.fillText('PC 조작: 방향키로 이동, Z키로 공격', canvas.width/2, canvas.height/2);
+        }
         ctx.font = '24px Arial';
-        ctx.fillText('Press Enter to Start', canvas.width/2, canvas.height/2 + 50);
+        ctx.fillText('Press Enter to Continue', canvas.width/2, canvas.height/2 + 50);
         return;
     }
 
@@ -630,8 +660,8 @@ function draw() {
     const heartSpacing = 25;
     const heartY = 90;
 
-    // 조이스틱 그리기
-    if (gameState === 'playing') {
+    // 조이스틱 그리기 (모바일인 경우에만)
+    if (gameState === 'playing' && platform === 'mobile') {
         drawJoystick(moveJoystickPos.x, moveJoystickPos.y, moveJoystick.active, moveJoystick.moveX, moveJoystick.moveY);
         drawJoystick(shootJoystickPos.x, shootJoystickPos.y, shootJoystick.active, shootJoystick.moveX, shootJoystick.moveY);
         
