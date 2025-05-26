@@ -9,15 +9,42 @@ let thirdPhase = false; // 3페이지 돌입 여부
 let playerColor = '#ffffff'; // 플레이어 기본 색상
 let restartTimer = null; // 재시작 타이머
 
+// 시작 화면 이미지 로딩
+const startImage1 = new Image();
+const startImage2 = new Image();
+startImage1.src = '시작1.png';
+startImage2.src = '시작2.png';
+let startImage1Loaded = false;
+let startImage2Loaded = false;
+
+startImage1.onload = function() {
+    startImage1Loaded = true;
+};
+startImage2.onload = function() {
+    startImage2Loaded = true;
+};
+
 // 조이스틱 요소
 const shootJoystickElem = document.getElementById('moveJoystick');
 const moveJoystickElem = document.getElementById('actionJoystick');
 const shootKnob = shootJoystickElem.querySelector('.joystick-knob');
 const moveKnob = moveJoystickElem.querySelector('.joystick-knob');
+const healJoystickElem = document.getElementById('healJoystick');
+const reloadJoystickElem = document.getElementById('reloadJoystick');
+const healKnob = healJoystickElem.querySelector('.joystick-knob');
+const reloadKnob = reloadJoystickElem.querySelector('.joystick-knob');
 
 // 조이스틱 상태
 let shootJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
 let moveJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
+let healJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
+let reloadJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
+
+// 조이스틱 위치
+const moveJoystickPos = { x: 100, y: canvas.height - 100 };
+const shootJoystickPos = { x: canvas.width - 100, y: canvas.height - 100 };
+const healJoystickPos = { x: 100, y: canvas.height - 200 };
+const reloadJoystickPos = { x: canvas.width - 100, y: canvas.height - 200 };
 
 // 조이스틱 설정
 const joystickRadius = 40;
@@ -112,6 +139,14 @@ shootJoystickElem.addEventListener('touchend', handleJoystickEnd);
 moveJoystickElem.addEventListener('touchstart', handleMoveJoystickStart);
 moveJoystickElem.addEventListener('touchmove', handleMoveJoystickMove);
 moveJoystickElem.addEventListener('touchend', handleJoystickEnd);
+
+healJoystickElem.addEventListener('touchstart', handleHealJoystickStart);
+healJoystickElem.addEventListener('touchmove', handleHealJoystickMove);
+healJoystickElem.addEventListener('touchend', handleJoystickEnd);
+
+reloadJoystickElem.addEventListener('touchstart', handleReloadJoystickStart);
+reloadJoystickElem.addEventListener('touchmove', handleReloadJoystickMove);
+reloadJoystickElem.addEventListener('touchend', handleJoystickEnd);
 
 // 캔버스 터치 이벤트 처리
 canvas.addEventListener('touchstart', (e) => {
@@ -240,6 +275,18 @@ function handleJoystickEnd(e) {
         shootKnob.style.transform = 'translate(0, 0)';
         player.shooting = false;
     }
+    if (healJoystick.active) {
+        healJoystick.active = false;
+        healJoystick.moveX = 0;
+        healJoystick.moveY = 0;
+        healKnob.style.transform = 'translate(0, 0)';
+    }
+    if (reloadJoystick.active) {
+        reloadJoystick.active = false;
+        reloadJoystick.moveX = 0;
+        reloadJoystick.moveY = 0;
+        reloadKnob.style.transform = 'translate(0, 0)';
+    }
 }
 
 function distance(x1, y1, x2, y2) {
@@ -337,14 +384,14 @@ function movePlayer() {
         const normalizedX = moveJoystick.moveX / joystickRadius;
         const normalizedY = moveJoystick.moveY / joystickRadius;
         
-        if (player.x + normalizedX * player.speed > 0 && 
-            player.x + normalizedX * player.speed < canvas.width - player.width) {
-            player.x += normalizedX * player.speed;
+        if (player.x + normalizedX * player.speed * 5 > 0 && 
+            player.x + normalizedX * player.speed * 5 < canvas.width - player.width) {
+            player.x += normalizedX * player.speed * 5;
             if (normalizedX !== 0) player.direction = { x: Math.sign(normalizedX), y: 0 };
         }
-        if (player.y + normalizedY * player.speed > 0 && 
-            player.y + normalizedY * player.speed < canvas.height - player.height) {
-            player.y += normalizedY * player.speed;
+        if (player.y + normalizedY * player.speed * 5 > 0 && 
+            player.y + normalizedY * player.speed * 5 < canvas.height - player.height) {
+            player.y += normalizedY * player.speed * 5;
             if (normalizedY !== 0) player.direction = { x: 0, y: Math.sign(normalizedY) };
         }
     }
@@ -398,7 +445,7 @@ function createEnemyBullets() {
     enemy.patternTimer++;
     
     if (!enemy.reviving) {
-        if (enemy.patternTimer % 30 === 0) {
+        if (enemy.patternTimer % 60 === 0) {
             // 원형 탄막 패턴
             for (let i = 0; i < 12; i++) {
                 const angle = (Math.PI * 2 / 12) * i;
@@ -556,6 +603,9 @@ function draw() {
 
     // 시작 화면
     if (gameState === 'start') {
+        if (startImage1Loaded) {
+            ctx.drawImage(startImage1, 0, 0, canvas.width, canvas.height);
+        }
         ctx.fillStyle = '#fff';
         ctx.font = '48px Arial';
         ctx.textAlign = 'center';
@@ -569,11 +619,18 @@ function draw() {
 
     // 플랫폼 선택 화면
     if (gameState === 'platformSelect') {
+        if (startImage2Loaded) {
+            ctx.drawImage(startImage2, 0, 0, canvas.width, canvas.height);
+        }
         ctx.fillStyle = '#fff';
         ctx.font = '36px Arial';
         ctx.textAlign = 'center';
         if (platform === 'mobile') {
-            ctx.fillText('모바일 조작: 조이스틱으로 이동과 공격', canvas.width/2, canvas.height/2);
+            ctx.fillText('모바일 조작:', canvas.width/2, canvas.height/2 - 50);
+            ctx.fillText('왼쪽 아래: 이동 조이스틱', canvas.width/2, canvas.height/2);
+            ctx.fillText('오른쪽 아래: 공격 조이스틱', canvas.width/2, canvas.height/2 + 30);
+            ctx.fillText('왼쪽 위: 포션 조이스틱', canvas.width/2, canvas.height/2 + 60);
+            ctx.fillText('오른쪽 위: 재장전 조이스틱', canvas.width/2, canvas.height/2 + 90);
         } else {
             ctx.fillText('PC 조작: 방향키로 이동, Z키로 공격', canvas.width/2, canvas.height/2);
         }
@@ -770,6 +827,85 @@ function draw() {
 }
 
 // 게임 루프
+function handleHealJoystickStart(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = healJoystickElem.getBoundingClientRect();
+    healJoystick.active = true;
+    healJoystick.startX = touch.clientX - rect.left;
+    healJoystick.startY = touch.clientY - rect.top;
+    
+    if (player.healCount > 0 && player.health < player.maxHealth) {
+        player.health = Math.min(player.health + 3, player.maxHealth);
+        player.healCount--;
+    }
+}
+
+function handleHealJoystickMove(e) {
+    e.preventDefault();
+    if (!healJoystick.active) return;
+    
+    const touch = e.touches[0];
+    const rect = healJoystickElem.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    healJoystick.moveX = (touch.clientX - rect.left - centerX) / joystickRadius;
+    healJoystick.moveY = (touch.clientY - rect.top - centerY) / joystickRadius;
+    
+    const dist = Math.sqrt(healJoystick.moveX ** 2 + healJoystick.moveY ** 2);
+    if (dist > 1) {
+        healJoystick.moveX /= dist;
+        healJoystick.moveY /= dist;
+    }
+    
+    healKnob.style.transform = `translate(${healJoystick.moveX * joystickRadius}px, ${healJoystick.moveY * joystickRadius}px)`;
+}
+
+function handleReloadJoystickStart(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = reloadJoystickElem.getBoundingClientRect();
+    reloadJoystick.active = true;
+    reloadJoystick.startX = touch.clientX - rect.left;
+    reloadJoystick.startY = touch.clientY - rect.top;
+    
+    if (player.ammo < player.maxAmmo && !player.reloading) {
+        player.reloading = true;
+        player.reloadDots = 0;
+        const reloadInterval = setInterval(() => {
+            player.reloadDots++;
+            if (player.reloadDots >= 3) {
+                player.ammo = player.maxAmmo;
+                player.reloading = false;
+                player.reloadDots = 0;
+                clearInterval(reloadInterval);
+            }
+        }, 200);
+    }
+}
+
+function handleReloadJoystickMove(e) {
+    e.preventDefault();
+    if (!reloadJoystick.active) return;
+    
+    const touch = e.touches[0];
+    const rect = reloadJoystickElem.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    reloadJoystick.moveX = (touch.clientX - rect.left - centerX) / joystickRadius;
+    reloadJoystick.moveY = (touch.clientY - rect.top - centerY) / joystickRadius;
+    
+    const dist = Math.sqrt(reloadJoystick.moveX ** 2 + reloadJoystick.moveY ** 2);
+    if (dist > 1) {
+        reloadJoystick.moveX /= dist;
+        reloadJoystick.moveY /= dist;
+    }
+    
+    reloadKnob.style.transform = `translate(${reloadJoystick.moveX * joystickRadius}px, ${reloadJoystick.moveY * joystickRadius}px)`;
+}
+
 function gameLoop() {
     if (gameState === 'playing') {
         movePlayer();

@@ -79,10 +79,16 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     <div id="joystickContainer">
-        <div class="joystick" id="moveJoystick">
+        <div class="joystick" id="healJoystick" style="position: absolute; left: 70px; bottom: 200px; border-color: #ff69b4;">
+            <div class="joystick-knob" style="background-color: #ff69b4;"></div>
+        </div>
+        <div class="joystick" id="reloadJoystick" style="position: absolute; right: 70px; bottom: 200px; border-color: #ffff00;">
+            <div class="joystick-knob" style="background-color: #ffff00;"></div>
+        </div>
+        <div class="joystick" id="moveJoystick" style="position: absolute; left: 70px; bottom: 70px;">
             <div class="joystick-knob"></div>
         </div>
-        <div class="joystick" id="actionJoystick">
+        <div class="joystick" id="actionJoystick" style="position: absolute; right: 70px; bottom: 70px;">
             <div class="joystick-knob"></div>
         </div>
     </div>
