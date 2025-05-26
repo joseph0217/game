@@ -614,14 +614,32 @@ function draw() {
         if (startImage1Loaded) {
             ctx.drawImage(startImage1, 0, 0, canvas.width, canvas.height);
         }
+        // 반투명 검은색 오버레이
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 제목
         ctx.fillStyle = '#fff';
-        ctx.font = '48px Arial';
+        ctx.font = 'bold 64px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('플랫폼을 선택하세요', canvas.width/2, canvas.height/2 - 50);
-        ctx.font = '36px Arial';
+        ctx.fillText('슈팅 게임', canvas.width/2, canvas.height/3);
+
+        // 플랫폼 선택 버튼
+        ctx.font = '48px Arial';
+        ctx.fillText('플랫폼을 선택하세요', canvas.width/2, canvas.height/2);
+
+        // 모바일 버튼
         ctx.fillStyle = '#00ffff';
-        ctx.fillText('모바일', canvas.width/2 - 100, canvas.height/2 + 50);
-        ctx.fillText('PC', canvas.width/2 + 100, canvas.height/2 + 50);
+        ctx.fillRect(canvas.width/2 - 150, canvas.height/2 + 20, 120, 60);
+        ctx.fillStyle = '#000';
+        ctx.font = '32px Arial';
+        ctx.fillText('모바일', canvas.width/2 - 90, canvas.height/2 + 60);
+
+        // PC 버튼
+        ctx.fillStyle = '#00ffff';
+        ctx.fillRect(canvas.width/2 + 30, canvas.height/2 + 20, 120, 60);
+        ctx.fillStyle = '#000';
+        ctx.fillText('PC', canvas.width/2 + 90, canvas.height/2 + 60);
         return;
     }
 
@@ -632,20 +650,65 @@ function draw() {
         if (startImage2Loaded) {
             ctx.drawImage(startImage2, 0, 0, canvas.width, canvas.height);
         }
+        // 반투명 검은색 오버레이
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         ctx.fillStyle = '#fff';
-        ctx.font = '36px Arial';
+        ctx.font = 'bold 48px Arial';
         ctx.textAlign = 'center';
+        ctx.fillText('조작 방법', canvas.width/2, 150);
+
         if (platform === 'mobile') {
-            ctx.fillText('모바일 조작:', canvas.width/2, canvas.height/2 - 50);
-            ctx.fillText('왼쪽 아래: 이동 조이스틱', canvas.width/2, canvas.height/2);
-            ctx.fillText('오른쪽 아래: 공격 조이스틱', canvas.width/2, canvas.height/2 + 30);
-            ctx.fillText('왼쪽 위: 포션 조이스틱', canvas.width/2, canvas.height/2 + 60);
-            ctx.fillText('오른쪽 위: 재장전 조이스틱', canvas.width/2, canvas.height/2 + 90);
+            // 모바일 조작 설명
+            const controls = [
+                { text: '이동', x: canvas.width/4, y: canvas.height/2 - 100 },
+                { text: '공격', x: canvas.width*3/4, y: canvas.height/2 - 100 },
+                { text: '회복', x: canvas.width/4, y: canvas.height/2 + 50 },
+                { text: '재장전', x: canvas.width*3/4, y: canvas.height/2 + 50 }
+            ];
+
+            controls.forEach(control => {
+                // 조이스틱 원 그리기
+                ctx.beginPath();
+                ctx.arc(control.x, control.y, 40, 0, Math.PI * 2);
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 텍스트
+                ctx.font = '24px Arial';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(control.text, control.x, control.y + 80);
+            });
         } else {
-            ctx.fillText('PC 조작: 방향키로 이동, Z키로 공격', canvas.width/2, canvas.height/2);
+            // PC 조작 설명
+            const keyControls = [
+                { key: '↑↓←→', desc: '이동' },
+                { key: 'Z', desc: '공격' },
+                { key: 'R', desc: '재장전' },
+                { key: 'B', desc: '회복' },
+                { key: 'Space', desc: '무적' }
+            ];
+
+            keyControls.forEach((control, index) => {
+                ctx.fillStyle = '#00ffff';
+                ctx.fillRect(canvas.width/2 - 150, canvas.height/2 - 80 + index * 50, 80, 40);
+                ctx.fillStyle = '#000';
+                ctx.font = '20px Arial';
+                ctx.fillText(control.key, canvas.width/2 - 110, canvas.height/2 - 50 + index * 50);
+                ctx.fillStyle = '#fff';
+                ctx.font = '24px Arial';
+                ctx.fillText(control.desc, canvas.width/2 + 50, canvas.height/2 - 50 + index * 50);
+            });
         }
+
+        // 계속하기 버튼
+        ctx.fillStyle = '#00ffff';
+        ctx.fillRect(canvas.width/2 - 100, canvas.height - 100, 200, 50);
+        ctx.fillStyle = '#000';
         ctx.font = '24px Arial';
-        ctx.fillText('Press Enter to Continue', canvas.width/2, canvas.height/2 + 150);
+        ctx.fillText('계속하기 (Enter)', canvas.width/2, canvas.height - 65);
         return;
     }
 
@@ -653,22 +716,41 @@ function draw() {
     if (gameState === 'colorSelect') {
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // 반투명 검은색 오버레이
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         ctx.fillStyle = '#fff';
-        ctx.font = '36px Arial';
+        ctx.font = 'bold 48px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('색상을 선택하세요', canvas.width/2, 150);
+        ctx.fillText('캐릭터 색상 선택', canvas.width/2, 150);
+
+        const boxWidth = 200;
+        const boxHeight = 60;
+        const startY = 250;
+        const spacing = 80;
 
         colorOptions.forEach((color, index) => {
-            ctx.fillStyle = index === selectedColorIndex ? '#fff' : '#666';
-            ctx.font = '24px Arial';
-            ctx.fillText(color.name, canvas.width/2, 250 + index * 40);
+            const y = startY + index * spacing;
             
-            // 색상 미리보기 원 그리기
-            ctx.beginPath();
-            ctx.arc(canvas.width/2 - 100, 242 + index * 40, 10, 0, Math.PI * 2);
+            // 선택 박스 그리기
+            ctx.fillStyle = index === selectedColorIndex ? '#00ffff' : '#333';
+            ctx.fillRect(canvas.width/2 - boxWidth/2, y - boxHeight/2, boxWidth, boxHeight);
+            
+            // 색상 이름
+            ctx.font = '24px Arial';
+            ctx.fillStyle = index === selectedColorIndex ? '#000' : '#fff';
+            ctx.fillText(color.name, canvas.width/2, y + 10);
+            
+            // 색상 미리보기 캐릭터
             ctx.fillStyle = color.value;
-            ctx.fill();
+            ctx.fillRect(canvas.width/2 - boxWidth/2 - 50, y - 15, 30, 30);
         });
+
+        // 선택 안내
+        ctx.fillStyle = '#fff';
+        ctx.font = '24px Arial';
+        ctx.fillText('↑↓ 키로 선택 후 Enter를 눌러주세요', canvas.width/2, canvas.height - 100);
         return;
     }
 
