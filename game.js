@@ -363,7 +363,7 @@ function createPlayerBullet() {
         currentTime - player.lastShotTime >= 250) { // 0.25초 딜레이
         player.shotCount++;
         const isSpecialBullet = player.shotCount % 6 === 0;
-        const bulletDamage = enemy.health > 60 ? 20 : 10; // 2페이지에서 데미지 증가
+        const bulletDamage = enemy.health > 60 ? 20 : 10;
         
         bullets.push({
             x: player.x + player.width / 2,
@@ -377,7 +377,6 @@ function createPlayerBullet() {
         });
         player.ammo--;
         player.lastShotTime = currentTime;
-        player.shooting = false;
     }
 }
 
@@ -404,7 +403,6 @@ function createEnemyBullets() {
     } else {
         // 불기둥 패턴
         enemy.fireAngle += 0.1;
-        const radius = 50;
         for (let i = 0; i < 8; i++) {
             const angle = enemy.fireAngle + (Math.PI * 2 / 8) * i;
             enemyBullets.push({
@@ -617,6 +615,7 @@ function draw() {
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
     ctx.fillText(`Enemy HP: ${enemy.health}`, 10, 30);
+    ctx.fillStyle = '#00ffff';
     ctx.fillText(`Ammo: ${player.ammo}/${player.maxAmmo}${player.reloading ? ' (Reloading' + '.'.repeat(player.reloadDots) + ')' : ''}`, 10, 60);
 
     // 무적 상태 표시
