@@ -34,6 +34,12 @@ const reloadJoystickElem = document.getElementById('reloadJoystick');
 const healKnob = healJoystickElem.querySelector('.joystick-knob');
 const reloadKnob = reloadJoystickElem.querySelector('.joystick-knob');
 
+// 초기에 모든 조이스틱 숨기기
+shootJoystickElem.style.display = 'none';
+moveJoystickElem.style.display = 'none';
+healJoystickElem.style.display = 'none';
+reloadJoystickElem.style.display = 'none';
+
 // 조이스틱 상태
 let shootJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
 let moveJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
@@ -603,6 +609,8 @@ function draw() {
 
     // 시작 화면
     if (gameState === 'start') {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (startImage1Loaded) {
             ctx.drawImage(startImage1, 0, 0, canvas.width, canvas.height);
         }
@@ -619,6 +627,8 @@ function draw() {
 
     // 플랫폼 선택 화면
     if (gameState === 'platformSelect') {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         if (startImage2Loaded) {
             ctx.drawImage(startImage2, 0, 0, canvas.width, canvas.height);
         }
@@ -635,21 +645,29 @@ function draw() {
             ctx.fillText('PC 조작: 방향키로 이동, Z키로 공격', canvas.width/2, canvas.height/2);
         }
         ctx.font = '24px Arial';
-        ctx.fillText('Press Enter to Continue', canvas.width/2, canvas.height/2 + 50);
+        ctx.fillText('Press Enter to Continue', canvas.width/2, canvas.height/2 + 150);
         return;
     }
 
     // 색상 선택 화면
     if (gameState === 'colorSelect') {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#fff';
         ctx.font = '36px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Select Your Color', canvas.width/2, 150);
+        ctx.fillText('색상을 선택하세요', canvas.width/2, 150);
 
         colorOptions.forEach((color, index) => {
             ctx.fillStyle = index === selectedColorIndex ? '#fff' : '#666';
             ctx.font = '24px Arial';
             ctx.fillText(color.name, canvas.width/2, 250 + index * 40);
+            
+            // 색상 미리보기 원 그리기
+            ctx.beginPath();
+            ctx.arc(canvas.width/2 - 100, 242 + index * 40, 10, 0, Math.PI * 2);
+            ctx.fillStyle = color.value;
+            ctx.fill();
         });
         return;
     }
@@ -717,6 +735,19 @@ function draw() {
     const heartSpacing = 25;
     const heartY = 90;
 
+    // 조이스틱 표시 상태 업데이트
+    if (gameState === 'playing' && platform === 'mobile') {
+        shootJoystickElem.style.display = 'block';
+        moveJoystickElem.style.display = 'block';
+        healJoystickElem.style.display = 'block';
+        reloadJoystickElem.style.display = 'block';
+    } else {
+        shootJoystickElem.style.display = 'none';
+        moveJoystickElem.style.display = 'none';
+        healJoystickElem.style.display = 'none';
+        reloadJoystickElem.style.display = 'none';
+    }
+    
     // 조이스틱 그리기 (모바일인 경우에만)
     if (gameState === 'playing' && platform === 'mobile') {
         drawJoystick(moveJoystickPos.x, moveJoystickPos.y, moveJoystick.active, moveJoystick.moveX, moveJoystick.moveY);
