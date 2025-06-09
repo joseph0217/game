@@ -1046,5 +1046,11 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
+// 게임 루프 시작
+gameLoop();
+
+// 게임 루프 시작
+gameLoop();
+
 // 게임 시작
 gameLoop();
