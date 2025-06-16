@@ -1,3 +1,11 @@
+// 캔버스 설정
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// 캔버스 크기 설정
+canvas.width = 800;
+canvas.height = 600;
+
 // 게임 상태 변수
 let gameState = 'start'; // 'start', 'platformSelect', 'colorSelect', 'playing', 'gameOver'
 let platform = ''; // 'mobile' 또는 'pc'
@@ -25,32 +33,22 @@ startImage2.onload = function() {
 };
 
 // 조이스틱 요소
-const shootJoystickElem = document.getElementById('moveJoystick');
-const moveJoystickElem = document.getElementById('actionJoystick');
-const shootKnob = shootJoystickElem.querySelector('.joystick-knob');
+const moveJoystickElem = document.getElementById('moveJoystick');
+const shootJoystickElem = document.getElementById('shootJoystick');
 const moveKnob = moveJoystickElem.querySelector('.joystick-knob');
-const healJoystickElem = document.getElementById('healJoystick');
-const reloadJoystickElem = document.getElementById('reloadJoystick');
-const healKnob = healJoystickElem.querySelector('.joystick-knob');
-const reloadKnob = reloadJoystickElem.querySelector('.joystick-knob');
+const shootKnob = shootJoystickElem.querySelector('.joystick-knob');
 
 // 초기에 모든 조이스틱 숨기기
-shootJoystickElem.style.display = 'none';
 moveJoystickElem.style.display = 'none';
-healJoystickElem.style.display = 'none';
-reloadJoystickElem.style.display = 'none';
+shootJoystickElem.style.display = 'none';
 
 // 조이스틱 상태
 let shootJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
 let moveJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
-let healJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
-let reloadJoystick = { active: false, startX: 0, startY: 0, moveX: 0, moveY: 0 };
 
 // 조이스틱 위치
 const moveJoystickPos = { x: 100, y: canvas.height - 100 };
 const shootJoystickPos = { x: canvas.width - 100, y: canvas.height - 100 };
-const healJoystickPos = { x: 100, y: canvas.height - 200 };
-const reloadJoystickPos = { x: canvas.width - 100, y: canvas.height - 200 };
 
 // 조이스틱 설정
 const joystickRadius = 40;
@@ -81,14 +79,6 @@ const colorOptions = [
     { name: '보라색', value: '#800080' }
 ];
 let selectedColorIndex = 0;
-
-// 캔버스 설정
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-
-// 캔버스 크기 설정
-canvas.width = 800;
-canvas.height = 600;
 
 // 플레이어 설정
 const player = {
@@ -137,54 +127,75 @@ const enemy = {
 // 키 입력 및 터치 이벤트 처리
 const keys = {};
 
-// 터치 이벤트 처리
-shootJoystickElem.addEventListener('touchstart', handleShootJoystickStart);
-shootJoystickElem.addEventListener('touchmove', handleShootJoystickMove);
-shootJoystickElem.addEventListener('touchend', handleJoystickEnd);
-
-moveJoystickElem.addEventListener('touchstart', handleMoveJoystickStart);
-moveJoystickElem.addEventListener('touchmove', handleMoveJoystickMove);
-moveJoystickElem.addEventListener('touchend', handleJoystickEnd);
-
-healJoystickElem.addEventListener('touchstart', handleHealJoystickStart);
-healJoystickElem.addEventListener('touchmove', handleHealJoystickMove);
-healJoystickElem.addEventListener('touchend', handleJoystickEnd);
-
-reloadJoystickElem.addEventListener('touchstart', handleReloadJoystickStart);
-reloadJoystickElem.addEventListener('touchmove', handleReloadJoystickMove);
-reloadJoystickElem.addEventListener('touchend', handleJoystickEnd);
-
-// 캔버스 터치 이벤트 처리
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
-
-    // 시작 화면에서 터치하면 색상 선택 화면으로
+// 이벤트 리스너 설정
+document.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+    
+    // 시작 화면에서 플랫폼 선택
     if (gameState === 'start') {
-        gameState = 'colorSelect';
-        return;
-    }
-
-    // 색상 선택 화면에서 색상을 터치하면 게임 시작
-    if (gameState === 'colorSelect') {
-        const colorY = y - 250;
-        if (colorY >= 0) {
-            const selectedIndex = Math.floor(colorY / 40);
-            if (selectedIndex >= 0 && selectedIndex < colorOptions.length) {
-                selectedColorIndex = selectedIndex;
-                playerColor = colorOptions[selectedColorIndex].value;
-                gameState = 'playing';
-                startTime = Date.now();
-            }
+        if (e.key === 'ArrowLeft') {
+            platform = 'mobile';
+            gameState = 'platformSelect';
+        } else if (e.key === 'ArrowRight') {
+            platform = 'pc';
+            gameState = 'platformSelect';
         }
         return;
     }
 
-    // 게임 오버 화면에서 터치하면 재시작
-    if (gameState === 'gameOver') {
+    // 플랫폼 선택 화면에서 Enter 키를 누르면 색상 선택 화면으로
+    if (gameState === 'platformSelect' && e.key === 'Enter') {
+        gameState = 'colorSelect';
+        return;
+    }
+
+    // 색상 선택 화면에서의 키 입력 처리
+    if (gameState === 'colorSelect') {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+            selectedColorIndex = (selectedColorIndex - 1 + colorOptions.length) % colorOptions.length;
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+            selectedColorIndex = (selectedColorIndex + 1) % colorOptions.length;
+        } else if (e.key === 'Enter') {
+            playerColor = colorOptions[selectedColorIndex].value;
+            gameState = 'playing';
+            startTime = Date.now();
+        }
+        return;
+    }
+
+    // 게임 플레이 중 키 입력 처리
+    if (gameState === 'playing') {
+        if (e.key.toLowerCase() === 'r' && player.ammo < player.maxAmmo && !player.reloading) {
+            player.reloading = true;
+            player.reloadDots = 0;
+            const reloadInterval = setInterval(() => {
+                player.reloadDots++;
+                if (player.reloadDots >= 3) {
+                    player.ammo = player.maxAmmo;
+                    player.reloading = false;
+                    player.reloadDots = 0;
+                    clearInterval(reloadInterval);
+                }
+            }, 200);
+        }
+
+        if (e.key.toLowerCase() === 'b' && player.healCount > 0 && player.health < player.maxHealth) {
+            player.health = Math.min(player.health + 3, player.maxHealth);
+            player.healCount--;
+        }
+
+        if (e.code === 'Space' && !player.spaceInvincible && canUseInvincibility && enemy.health > 60) {
+            player.spaceInvincible = true;
+            player.spaceInvincibleTimer = 90;
+            canUseInvincibility = false;
+            setTimeout(() => {
+                canUseInvincibility = true;
+            }, 4500);
+        }
+    }
+
+    // 게임 오버 화면에서 Enter 키를 누르면 재시작
+    if (gameState === 'gameOver' && e.key === 'Enter') {
         gameState = 'playing';
         gameOver = false;
         player.health = player.maxHealth;
@@ -200,6 +211,147 @@ canvas.addEventListener('touchstart', (e) => {
     }
 });
 
+document.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+});
+
+// 터치 이벤트 리스너
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    if (gameState === 'start') {
+        gameState = 'colorSelect';
+    } else if (gameState === 'colorSelect') {
+        const colorY = y - 250;
+        if (colorY >= 0) {
+            const selectedIndex = Math.floor(colorY / 40);
+            if (selectedIndex >= 0 && selectedIndex < colorOptions.length) {
+                selectedColorIndex = selectedIndex;
+                playerColor = colorOptions[selectedColorIndex].value;
+                gameState = 'playing';
+                startTime = Date.now();
+            }
+        }
+    } else if (gameState === 'gameOver') {
+        gameState = 'playing';
+        gameOver = false;
+        player.health = player.maxHealth;
+        player.healCount = 3;
+        player.shotCount = 0;
+        enemy.health = 60;
+        enemy.reviving = false;
+        bullets = [];
+        enemyBullets = [];
+        player.x = canvas.width / 2;
+        player.y = canvas.height - 50;
+        startTime = Date.now();
+    }
+});
+
+function drawStartScreen() {
+    if (startImage1Loaded && startImage2Loaded) {
+        ctx.drawImage(startImage1, 0, 0, canvas.width, canvas.height);
+        if (Date.now() % 1000 < 500) {
+            ctx.drawImage(startImage2, 0, 0, canvas.width, canvas.height);
+        }
+    }
+}
+
+function drawColorSelect() {
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = '30px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText('색상을 선택하세요', canvas.width / 2, 200);
+
+    colorOptions.forEach((color, index) => {
+        ctx.fillStyle = index === selectedColorIndex ? '#ffffff' : '#666666';
+        ctx.fillText(color.name, canvas.width / 2, 250 + index * 40);
+    });
+}
+
+function drawGame() {
+    if (dungeonImageLoaded) {
+        ctx.drawImage(dungeonImage, 0, 0, canvas.width, canvas.height);
+    }
+
+    // 플레이어 그리기
+    if (player.invincible || player.spaceInvincible) {
+        player.flashToggle = !player.flashToggle;
+        if (player.flashToggle) {
+            ctx.fillStyle = '#ffffff';
+        } else {
+            ctx.fillStyle = playerColor;
+        }
+    } else {
+        ctx.fillStyle = playerColor;
+    }
+    ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+
+    // 적 그리기
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(enemy.x - enemy.width / 2, enemy.y - enemy.height / 2, enemy.width, enemy.height);
+
+    // 탄막 그리기
+    ctx.fillStyle = '#ffff00';
+    bullets.forEach(bullet => {
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    ctx.fillStyle = '#ff0000';
+    enemyBullets.forEach(bullet => {
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // UI 그리기
+    ctx.font = '20px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.fillText(`체력: ${player.health}`, 10, 30);
+    ctx.fillText(`탄약: ${player.ammo}`, 10, 60);
+    ctx.fillText(`회복: ${player.healCount}`, 10, 90);
+
+    // 재장전 표시
+    if (player.reloading) {
+        ctx.textAlign = 'center';
+        ctx.fillText('재장전' + '.'.repeat(player.reloadDots), canvas.width / 2, canvas.height - 50);
+    }
+
+    // 무적 쿨타임 표시
+    if (!canUseInvincibility) {
+        ctx.fillStyle = '#666666';
+        ctx.fillText('무적 쿨타임', canvas.width - 100, 30);
+    }
+}
+
+function drawGameOver() {
+    if (endImageLoaded) {
+        ctx.drawImage(endImage, 0, 0, canvas.width, canvas.height);
+    }
+
+    ctx.font = '30px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText('게임 오버', canvas.width / 2, canvas.height / 2 - 50);
+
+    const elapsedTime = endTime - startTime;
+    const minutes = Math.floor(elapsedTime / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+    ctx.fillText(`생존 시간: ${minutes}분 ${seconds}초`, canvas.width / 2, canvas.height / 2);
+    ctx.fillText(`발사한 탄환: ${player.shotCount}발`, canvas.width / 2, canvas.height / 2 + 50);
+}
+
+// 조이스틱 이벤트 핸들러
 function handleMoveJoystickStart(e) {
     e.preventDefault();
     const touch = e.touches[0];
@@ -281,65 +433,66 @@ function handleJoystickEnd(e) {
         shootKnob.style.transform = 'translate(0, 0)';
         player.shooting = false;
     }
-    if (healJoystick.active) {
-        healJoystick.active = false;
-        healJoystick.moveX = 0;
-        healJoystick.moveY = 0;
-        healKnob.style.transform = 'translate(0, 0)';
-    }
-    if (reloadJoystick.active) {
-        reloadJoystick.active = false;
-        reloadJoystick.moveX = 0;
-        reloadJoystick.moveY = 0;
-        reloadKnob.style.transform = 'translate(0, 0)';
-    }
 }
 
-function distance(x1, y1, x2, y2) {
-    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-}
+// 조이스틱 이벤트 리스너 등록
+moveJoystickElem.addEventListener('touchstart', handleMoveJoystickStart);
+moveJoystickElem.addEventListener('touchmove', handleMoveJoystickMove);
+moveJoystickElem.addEventListener('touchend', handleJoystickEnd);
 
-document.addEventListener('keydown', (e) => {
-    // 시작 화면에서 플랫폼 선택
+// 터치 이벤트 처리
+shootJoystickElem.addEventListener('touchstart', handleShootJoystickStart);
+shootJoystickElem.addEventListener('touchmove', handleShootJoystickMove);
+shootJoystickElem.addEventListener('touchend', handleJoystickEnd);
+
+moveJoystickElem.addEventListener('touchstart', handleMoveJoystickStart);
+moveJoystickElem.addEventListener('touchmove', handleMoveJoystickMove);
+moveJoystickElem.addEventListener('touchend', handleJoystickEnd);
+
+// 캔버스 터치 이벤트 처리
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    // 시작 화면에서 터치하면 플랫폼 선택 화면으로
     if (gameState === 'start') {
-        if (e.key === 'ArrowLeft') {
-            platform = 'mobile';
-            gameState = 'platformSelect';
-        } else if (e.key === 'ArrowRight') {
-            platform = 'pc';
-            gameState = 'platformSelect';
-        }
+        platform = 'mobile';
+        gameState = 'platformSelect';
         return;
     }
 
-    // 플랫폼 선택 화면에서 Enter 키를 누르면 색상 선택 화면으로
-    if (gameState === 'platformSelect' && e.key === 'Enter') {
+    // 플랫폼 선택 화면에서 터치하면 색상 선택 화면으로
+    if (gameState === 'platformSelect') {
         gameState = 'colorSelect';
         return;
     }
 
-    // B키로 체력 회복
-    if (gameState === 'playing' && e.key.toLowerCase() === 'b' && player.healCount > 0 && player.health < player.maxHealth) {
-        player.health = Math.min(player.health + 3, player.maxHealth);
-        player.healCount--;
-    }
-
-    // 색상 선택 화면에서의 키 입력 처리
+    // 색상 선택 화면에서 색상을 터치하면 게임 시작
     if (gameState === 'colorSelect') {
-        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-            selectedColorIndex = (selectedColorIndex - 1 + colorOptions.length) % colorOptions.length;
-        } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-            selectedColorIndex = (selectedColorIndex + 1) % colorOptions.length;
-        } else if (e.key === 'Enter') {
-            playerColor = colorOptions[selectedColorIndex].value;
-            gameState = 'playing';
-            startTime = Date.now(); // 게임 시작 시간 초기화
+        const colorY = y - 250;
+        if (colorY >= 0) {
+            const selectedIndex = Math.floor(colorY / 40);
+            if (selectedIndex >= 0 && selectedIndex < colorOptions.length) {
+                selectedColorIndex = selectedIndex;
+                playerColor = colorOptions[selectedColorIndex].value;
+                gameState = 'playing';
+                startTime = Date.now();
+
+                // 모바일 모드에서 조이스틱 표시
+                if (platform === 'mobile') {
+                    moveJoystickElem.style.display = 'block';
+                    shootJoystickElem.style.display = 'block';
+                }
+            }
         }
         return;
     }
 
-    // 게임 오버 상태에서 Enter 키를 누르면 게임 재시작
-    if (gameState === 'gameOver' && e.key === 'Enter') {
+    // 게임 오버 화면에서 터치하면 재시작
+    if (gameState === 'gameOver') {
         gameState = 'playing';
         gameOver = false;
         player.health = player.maxHealth;
@@ -352,705 +505,195 @@ document.addEventListener('keydown', (e) => {
         player.x = canvas.width / 2;
         player.y = canvas.height - 50;
         startTime = Date.now();
-        return;
-    }
-    keys[e.key] = true;
-    if (e.key.toLowerCase() === 'r' && player.ammo < player.maxAmmo && !player.reloading) {
-        player.reloading = true;
-        player.reloadDots = 0;
-        const reloadInterval = setInterval(() => {
-            player.reloadDots++;
-            if (player.reloadDots >= 3) {
-                player.ammo = player.maxAmmo;
-                player.reloading = false;
-                player.reloadDots = 0;
-                clearInterval(reloadInterval);
-            }
-        }, 200);
-    }
 
-    // 스페이스바로 무적 모드 활성화 (2페이지부터 + 쿨타임 체크)
-    if (gameState === 'playing' && e.code === 'Space' && !player.spaceInvincible && canUseInvincibility && enemy.health > 60) {
-        player.spaceInvincible = true;
-        player.spaceInvincibleTimer = 90; // 1.5초 무적
-        canUseInvincibility = false;
-
-        // 쿨다운 타이머 시작
-        setTimeout(() => {
-            canUseInvincibility = true;
-        }, 4500); // 무적 1.5초 + 쿨타임 3초 = 4.5초 후 다시 사용 가능
+        // 모바일 모드에서 조이스틱 표시
+        if (platform === 'mobile') {
+            moveJoystickElem.style.display = 'block';
+            shootJoystickElem.style.display = 'block';
+        }
     }
 });
-document.addEventListener('keyup', (e) => keys[e.key] = false);
-
-// 플레이어 이동
-function movePlayer() {
-    // 터치 조이스틱으로 이동
-    if (moveJoystick.active) {
-        const normalizedX = moveJoystick.moveX / joystickRadius;
-        const normalizedY = moveJoystick.moveY / joystickRadius;
-        
-        if (player.x + normalizedX * player.speed * 5 > 0 && 
-            player.x + normalizedX * player.speed * 5 < canvas.width - player.width) {
-            player.x += normalizedX * player.speed * 5;
-            if (normalizedX !== 0) player.direction = { x: Math.sign(normalizedX), y: 0 };
-        }
-        if (player.y + normalizedY * player.speed * 5 > 0 && 
-            player.y + normalizedY * player.speed * 5 < canvas.height - player.height) {
-            player.y += normalizedY * player.speed * 5;
-            if (normalizedY !== 0) player.direction = { x: 0, y: Math.sign(normalizedY) };
-        }
-    }
-    // 키보드 입력으로 이동
-    if (keys['ArrowLeft'] && player.x > 0) {
-        player.x -= player.speed;
-        player.direction = { x: -1, y: 0 };
-    }
-    if (keys['ArrowRight'] && player.x < canvas.width - player.width) {
-        player.x += player.speed;
-        player.direction = { x: 1, y: 0 };
-    }
-    if (keys['ArrowUp'] && player.y > 0) {
-        player.y -= player.speed;
-        player.direction = { x: 0, y: -1 };
-    }
-    if (keys['ArrowDown'] && player.y < canvas.height - player.height) {
-        player.y += player.speed;
-        player.direction = { x: 0, y: 1 };
-    }
-    if (keys['z'] || shootJoystick.active) player.shooting = true;
-    else player.shooting = false;
-}
-
-// 플레이어 탄환 생성
-function createPlayerBullet() {
-    const currentTime = Date.now();
-    if (player.shooting && !player.reloading && player.ammo > 0 && 
-        currentTime - player.lastShotTime >= 250) { // 0.25초 딜레이
-        player.shotCount++;
-        const isSpecialBullet = player.shotCount % 6 === 0;
-        const bulletDamage = enemy.health > 60 ? 20 : 10;
-        
-        bullets.push({
-            x: player.x + player.width / 2,
-            y: player.y + player.height / 2,
-            radius: isSpecialBullet ? 7 : 5,
-            speed: 7,
-            dx: player.direction.x * 7,
-            dy: player.direction.y * 7,
-            color: isSpecialBullet ? '#800080' : '#00ffff',
-            damage: isSpecialBullet ? bulletDamage * 1.5 : bulletDamage
-        });
-        player.ammo--;
-        player.lastShotTime = currentTime;
-    }
-}
-
-// 적 탄막 패턴
-function createEnemyBullets() {
-    enemy.patternTimer++;
-    
-    if (!enemy.reviving) {
-        if (enemy.patternTimer % 60 === 0) {
-            // 원형 탄막 패턴
-            for (let i = 0; i < 12; i++) {
-                const angle = (Math.PI * 2 / 12) * i;
-                enemyBullets.push({
-                    x: enemy.x + enemy.width / 2,
-                    y: enemy.y + enemy.height / 2,
-                    radius: 4,
-                    speed: 3,
-                    dx: Math.cos(angle) * 3,
-                    dy: Math.sin(angle) * 3,
-                    color: '#ff0000'
-                });
-            }
-        }
-    } else {
-        // 불기둥 패턴
-        enemy.fireAngle += 0.1;
-        for (let i = 0; i < 8; i++) {
-            const angle = enemy.fireAngle + (Math.PI * 2 / 8) * i;
-            enemyBullets.push({
-                x: enemy.x + enemy.width / 2,
-                y: enemy.y + enemy.height / 2,
-                radius: 6,
-                speed: 1,
-                dx: Math.cos(angle) * 3,
-                dy: Math.sin(angle) * 3,
-                color: '#ffa500'
-            });
-        }
-    }
-}
-
-// 탄환 업데이트
-function updateBullets() {
-    // 플레이어 탄환
-    bullets = bullets.filter(bullet => {
-        if (bullet.dx !== undefined && bullet.dy !== undefined) {
-            bullet.x += bullet.dx;
-            bullet.y += bullet.dy;
-            return bullet.x > 0 && bullet.x < canvas.width && 
-                   bullet.y > 0 && bullet.y < canvas.height;
-        } else {
-            bullet.y -= bullet.speed;
-            return bullet.y > 0;
-        }
-    });
-
-    // 적 탄환
-    enemyBullets = enemyBullets.filter(bullet => {
-        bullet.x += bullet.dx;
-        bullet.y += bullet.dy;
-        return bullet.x > 0 && bullet.x < canvas.width && 
-               bullet.y > 0 && bullet.y < canvas.height;
-    });
-}
-
-// 충돌 감지
-function checkCollisions() {
-    // 플레이어 탄환과 적 충돌
-    bullets.forEach((bullet, index) => {
-        if (bullet.x > enemy.x && bullet.x < enemy.x + enemy.width &&
-            bullet.y > enemy.y && bullet.y < enemy.y + enemy.height) {
-            bullets.splice(index, 1);
-            enemy.health -= bullet.damage;
-            
-            // 적의 체력이 0 이하가 되면 부활 패턴 시작
-            if (enemy.health <= 0) {
-                enemy.reviving = true;
-                enemy.fireAngle = 0;
-                // 화면 중앙으로 부드럽게 이동
-                const moveToCenter = () => {
-                    const targetX = canvas.width / 2 - enemy.width / 2;
-                    const targetY = canvas.height / 2 - enemy.height / 2;
-                    const dx = (targetX - enemy.x) * 0.1;
-                    const dy = (targetY - enemy.y) * 0.1;
-                    
-                    enemy.x += dx;
-                    enemy.y += dy;
-                    
-                    if (Math.abs(targetX - enemy.x) > 1 || Math.abs(targetY - enemy.y) > 1) {
-                        requestAnimationFrame(moveToCenter);
-                    } else {
-                        enemy.x = targetX;
-                        enemy.y = targetY;
-                        setTimeout(() => {
-                            enemy.reviving = false;
-                            enemy.health = 500;
-                            
-                        }, 2500);
-                    }
-                };
-                moveToCenter();
-            }
-        }
-    });
-
-    // 적 탄환과 플레이어 충돌
-    enemyBullets.forEach((bullet, index) => {
-        const dx = (player.x + player.width / 2) - bullet.x;
-        const dy = (player.y + player.height / 2) - bullet.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < player.width / 2 + bullet.radius) {
-            if (!player.invincible && !player.spaceInvincible) {
-                player.health--;
-                player.invincible = true;
-                player.invincibleTimer = 90;
-                player.lastHitTime = Date.now();
-                enemyBullets.splice(index, 1);
-
-                if (player.health <= 0) {
-                    gameOver = true;
-                    gameState = 'gameOver';
-                    endTime = Date.now();
-                    restartTimer = null;
-                }
-            }
-        }
-    });
-}
-
-// 그리기 함수
-
-
-function draw() {
-    // 조이스틱 그리기 함수
-    function drawJoystick(baseX, baseY, active, moveX, moveY) {
-        ctx.beginPath();
-        ctx.arc(baseX, baseY, joystickRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        if (active) {
-            ctx.beginPath();
-            ctx.arc(baseX + moveX, baseY + moveY, joystickRadius / 2, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffffff80';
-            ctx.fill();
-        } else {
-            ctx.beginPath();
-            ctx.arc(baseX, baseY, joystickRadius / 2, 0, Math.PI * 2);
-            ctx.fillStyle = '#ffffff40';
-            ctx.fill();
-        }
-    }
-
-    // 화면 클리어
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // 게임 플레이 중일 때 던전 배경 표시
-    if (gameState === 'playing' && dungeonImageLoaded) {
-        ctx.drawImage(dungeonImage, 0, 0, canvas.width, canvas.height);
-    }
-
-    // 시작 화면
-    if (gameState === 'start') {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        if (startImage1Loaded) {
-            ctx.drawImage(startImage1, 0, 0, canvas.width, canvas.height);
-        }
-        // 반투명 검은색 오버레이
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // 제목
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 64px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('슈팅 게임', canvas.width/2, canvas.height/3);
-
-        // 플랫폼 선택 버튼
-        ctx.font = '48px Arial';
-        ctx.fillText('플랫폼을 선택하세요', canvas.width/2, canvas.height/2);
-
-        // 모바일 버튼
-        ctx.fillStyle = '#00ffff';
-        ctx.fillRect(canvas.width/2 - 150, canvas.height/2 + 20, 120, 60);
-        ctx.fillStyle = '#000';
-        ctx.font = '32px Arial';
-        ctx.fillText('모바일', canvas.width/2 - 90, canvas.height/2 + 60);
-
-        // PC 버튼
-        ctx.fillStyle = '#00ffff';
-        ctx.fillRect(canvas.width/2 + 30, canvas.height/2 + 20, 120, 60);
-        ctx.fillStyle = '#000';
-        ctx.fillText('PC', canvas.width/2 + 90, canvas.height/2 + 60);
-        return;
-    }
-
-    // 플랫폼 선택 화면
-    if (gameState === 'platformSelect') {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        if (startImage2Loaded) {
-            ctx.drawImage(startImage2, 0, 0, canvas.width, canvas.height);
-        }
-        // 반투명 검은색 오버레이
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 48px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('조작 방법', canvas.width/2, 150);
-
-        if (platform === 'mobile') {
-            // 모바일 조작 설명
-            const controls = [
-                { text: '이동', x: canvas.width/4, y: canvas.height/2 - 100 },
-                { text: '공격', x: canvas.width*3/4, y: canvas.height/2 - 100 },
-                { text: '회복', x: canvas.width/4, y: canvas.height/2 + 50 },
-                { text: '재장전', x: canvas.width*3/4, y: canvas.height/2 + 50 }
-            ];
-
-            controls.forEach(control => {
-                // 조이스틱 원 그리기
-                ctx.beginPath();
-                ctx.arc(control.x, control.y, 40, 0, Math.PI * 2);
-                ctx.strokeStyle = '#00ffff';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-
-                // 텍스트
-                ctx.font = '24px Arial';
-                ctx.fillStyle = '#fff';
-                ctx.fillText(control.text, control.x, control.y + 80);
-            });
-        } else {
-            // PC 조작 설명
-            const keyControls = [
-                { key: '↑↓←→', desc: '이동' },
-                { key: 'Z', desc: '공격' },
-                { key: 'R', desc: '재장전' },
-                { key: 'B', desc: '회복' },
-                { key: 'Space', desc: '무적' }
-            ];
-
-            keyControls.forEach((control, index) => {
-                ctx.fillStyle = '#00ffff';
-                ctx.fillRect(canvas.width/2 - 150, canvas.height/2 - 80 + index * 50, 80, 40);
-                ctx.fillStyle = '#000';
-                ctx.font = '20px Arial';
-                ctx.fillText(control.key, canvas.width/2 - 110, canvas.height/2 - 50 + index * 50);
-                ctx.fillStyle = '#fff';
-                ctx.font = '24px Arial';
-                ctx.fillText(control.desc, canvas.width/2 + 50, canvas.height/2 - 50 + index * 50);
-            });
-        }
-
-        // 계속하기 버튼
-        ctx.fillStyle = '#00ffff';
-        ctx.fillRect(canvas.width/2 - 100, canvas.height - 100, 200, 50);
-        ctx.fillStyle = '#000';
-        ctx.font = '24px Arial';
-        ctx.fillText('계속하기 (Enter)', canvas.width/2, canvas.height - 65);
-        return;
-    }
-
-    // 색상 선택 화면
-    if (gameState === 'colorSelect') {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        // 반투명 검은색 오버레이
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 48px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('캐릭터 색상 선택', canvas.width/2, 150);
-
-        const boxWidth = 200;
-        const boxHeight = 60;
-        const startY = 250;
-        const spacing = 80;
-
-        colorOptions.forEach((color, index) => {
-            const y = startY + index * spacing;
-            
-            // 선택 박스 그리기
-            ctx.fillStyle = index === selectedColorIndex ? '#00ffff' : '#333';
-            ctx.fillRect(canvas.width/2 - boxWidth/2, y - boxHeight/2, boxWidth, boxHeight);
-            
-            // 색상 이름
-            ctx.font = '24px Arial';
-            ctx.fillStyle = index === selectedColorIndex ? '#000' : '#fff';
-            ctx.fillText(color.name, canvas.width/2, y + 10);
-            
-            // 색상 미리보기 캐릭터
-            ctx.fillStyle = color.value;
-            ctx.fillRect(canvas.width/2 - boxWidth/2 - 50, y - 15, 30, 30);
-        });
-
-        // 선택 안내
-        ctx.fillStyle = '#fff';
-        ctx.font = '24px Arial';
-        ctx.fillText('↑↓ 키로 선택 후 Enter를 눌러주세요', canvas.width/2, canvas.height - 100);
-        return;
-    }
-
-    // 게임 오버 화면
-    if (gameState === 'gameOver' && endImageLoaded) {
-        ctx.drawImage(endImage, 0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#fff';
-        ctx.font = '48px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('Re Start...?', canvas.width/2, canvas.height/2);
-        ctx.font = '24px Arial';
-        ctx.fillText('Press Enter to Restart', canvas.width/2, canvas.height/2 + 50);
-        return;
-    }
-
-    // 플레이어 그리기 (무적 상태일 때 깜빡임 효과)
-    if (player.invincible) {
-        player.flashToggle = !player.flashToggle;
-        ctx.fillStyle = player.flashToggle ? '#ffff00' : playerColor;
-    } else {
-        ctx.fillStyle = playerColor;
-    }
-    ctx.fillRect(player.x, player.y, player.width, player.height);
-
-    // 적 그리기
-    ctx.fillStyle = '#f00';
-    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-
-    // 플레이어 탄환 그리기
-    bullets.forEach(bullet => {
-        ctx.beginPath();
-        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-        ctx.fillStyle = bullet.color;
-        ctx.fill();
-        ctx.closePath();
-    });
-
-    // 적 탄환 그리기
-    enemyBullets.forEach(bullet => {
-        ctx.beginPath();
-        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
-        ctx.fillStyle = bullet.color;
-        ctx.fill();
-        ctx.closePath();
-    });
-
-    // 적 체력 표시
-    ctx.fillStyle = '#fff';
-    ctx.font = '20px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText(`Enemy HP: ${enemy.health}`, 10, 30);
-    ctx.fillStyle = '#00ffff';
-    ctx.fillText(`Ammo: ${player.ammo}/${player.maxAmmo}${player.reloading ? ' (Reloading' + '.'.repeat(player.reloadDots) + ')' : ''}`, 10, 60);
-
-    // 무적 상태 표시
-    if (player.invincible) {
-        ctx.fillStyle = '#00ffff';
-        ctx.textAlign = 'right';
-        ctx.fillText('Invincibility Active', canvas.width - 20, 30);
-    }
-
-    // 플레이어 체력(하트) 그리기
-    const heartSize = 20;
-    const heartSpacing = 25;
-    const heartY = 90;
-
-    // 조이스틱 표시 상태 업데이트
-    if (gameState === 'playing' && platform === 'mobile') {
-        shootJoystickElem.style.display = 'block';
-        moveJoystickElem.style.display = 'block';
-        healJoystickElem.style.display = 'block';
-        reloadJoystickElem.style.display = 'block';
-    } else {
-        shootJoystickElem.style.display = 'none';
-        moveJoystickElem.style.display = 'none';
-        healJoystickElem.style.display = 'none';
-        reloadJoystickElem.style.display = 'none';
-    }
-    
-    // 조이스틱 그리기 (모바일인 경우에만)
-    if (gameState === 'playing' && platform === 'mobile') {
-        drawJoystick(moveJoystickPos.x, moveJoystickPos.y, moveJoystick.active, moveJoystick.moveX, moveJoystick.moveY);
-        drawJoystick(shootJoystickPos.x, shootJoystickPos.y, shootJoystick.active, shootJoystick.moveX, shootJoystick.moveY);
-        
-        // 회복 조이스틱
-        ctx.beginPath();
-        ctx.arc(healJoystickPos.x, healJoystickPos.y, joystickRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = '#ff69b4';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(healJoystickPos.x, healJoystickPos.y, joystickRadius / 2, 0, Math.PI * 2);
-        ctx.fillStyle = healJoystick.active ? '#ff69b480' : '#ff69b440';
-        ctx.fill();
-
-        // 회복 아이콘
-        ctx.fillStyle = '#ff69b4';
-        ctx.font = '24px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('❤', healJoystickPos.x, healJoystickPos.y + 8);
-    }
-
-    // 회복 아이템 하트 그리기
-    const healHeartY = canvas.height - 40;
-    for (let i = 0; i < player.healCount; i++) {
-        const healHeartX = 10 + i * heartSpacing;
-        
-        ctx.beginPath();
-        ctx.moveTo(healHeartX + heartSize/2, healHeartY + heartSize/4);
-        
-        ctx.bezierCurveTo(
-            healHeartX + heartSize/2, healHeartY,
-            healHeartX, healHeartY,
-            healHeartX, healHeartY + heartSize/4
-        );
-        
-        ctx.bezierCurveTo(
-            healHeartX, healHeartY + heartSize/2,
-            healHeartX + heartSize/2, healHeartY + heartSize,
-            healHeartX + heartSize/2, healHeartY + heartSize
-        );
-        
-        ctx.bezierCurveTo(
-            healHeartX + heartSize/2, healHeartY + heartSize,
-            healHeartX + heartSize, healHeartY + heartSize/2,
-            healHeartX + heartSize, healHeartY + heartSize/4
-        );
-        
-        ctx.bezierCurveTo(
-            healHeartX + heartSize, healHeartY,
-            healHeartX + heartSize/2, healHeartY,
-            healHeartX + heartSize/2, healHeartY + heartSize/4
-        );
-        
-        ctx.fillStyle = '#ff69b4';
-        ctx.fill();
-        ctx.closePath();
-    }
-
-    // B키 안내 텍스트
-    if (player.healCount > 0) {
-        ctx.fillStyle = '#fff';
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText('Press B to Heal', 10, canvas.height - 10);
-    }
-    
-    for (let i = 0; i < player.maxHealth; i++) {
-        const heartX = 10 + i * heartSpacing;
-        const isFull = i < player.health;
-        
-        // 하트 그리기
-        ctx.beginPath();
-        ctx.moveTo(heartX + heartSize/2, heartY + heartSize/4);
-        
-        // 왼쪽 곡선
-        ctx.bezierCurveTo(
-            heartX + heartSize/2, heartY,
-            heartX, heartY,
-            heartX, heartY + heartSize/4
-        );
-        
-        ctx.bezierCurveTo(
-            heartX, heartY + heartSize/2,
-            heartX + heartSize/2, heartY + heartSize,
-            heartX + heartSize/2, heartY + heartSize
-        );
-        
-        // 오른쪽 곡선
-        ctx.bezierCurveTo(
-            heartX + heartSize/2, heartY + heartSize,
-            heartX + heartSize, heartY + heartSize/2,
-            heartX + heartSize, heartY + heartSize/4
-        );
-        
-        ctx.bezierCurveTo(
-            heartX + heartSize, heartY,
-            heartX + heartSize/2, heartY,
-            heartX + heartSize/2, heartY + heartSize/4
-        );
-        
-        ctx.fillStyle = isFull ? playerColor : '#4d0000';
-        ctx.fill();
-        ctx.closePath();
-    }
-}
 
 // 게임 루프
-function handleHealJoystickStart(e) {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = healJoystickElem.getBoundingClientRect();
-    healJoystick.active = true;
-    healJoystick.startX = touch.clientX - rect.left;
-    healJoystick.startY = touch.clientY - rect.top;
-    
-    if (player.healCount > 0 && player.health < player.maxHealth) {
-        player.health = Math.min(player.health + 3, player.maxHealth);
-        player.healCount--;
-    }
-}
-
-function handleHealJoystickMove(e) {
-    e.preventDefault();
-    if (!healJoystick.active) return;
-    
-    const touch = e.touches[0];
-    const rect = healJoystickElem.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    
-    healJoystick.moveX = (touch.clientX - rect.left - centerX) / joystickRadius;
-    healJoystick.moveY = (touch.clientY - rect.top - centerY) / joystickRadius;
-    
-    const dist = Math.sqrt(healJoystick.moveX ** 2 + healJoystick.moveY ** 2);
-    if (dist > 1) {
-        healJoystick.moveX /= dist;
-        healJoystick.moveY /= dist;
-    }
-    
-    healKnob.style.transform = `translate(${healJoystick.moveX * joystickRadius}px, ${healJoystick.moveY * joystickRadius}px)`;
-}
-
-function handleReloadJoystickStart(e) {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const rect = reloadJoystickElem.getBoundingClientRect();
-    reloadJoystick.active = true;
-    reloadJoystick.startX = touch.clientX - rect.left;
-    reloadJoystick.startY = touch.clientY - rect.top;
-    
-    if (player.ammo < player.maxAmmo && !player.reloading) {
-        player.reloading = true;
-        player.reloadDots = 0;
-        const reloadInterval = setInterval(() => {
-            player.reloadDots++;
-            if (player.reloadDots >= 3) {
-                player.ammo = player.maxAmmo;
-                player.reloading = false;
-                player.reloadDots = 0;
-                clearInterval(reloadInterval);
-            }
-        }, 200);
-    }
-}
-
-function handleReloadJoystickMove(e) {
-    e.preventDefault();
-    if (!reloadJoystick.active) return;
-    
-    const touch = e.touches[0];
-    const rect = reloadJoystickElem.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    
-    reloadJoystick.moveX = (touch.clientX - rect.left - centerX) / joystickRadius;
-    reloadJoystick.moveY = (touch.clientY - rect.top - centerY) / joystickRadius;
-    
-    const dist = Math.sqrt(reloadJoystick.moveX ** 2 + reloadJoystick.moveY ** 2);
-    if (dist > 1) {
-        reloadJoystick.moveX /= dist;
-        reloadJoystick.moveY /= dist;
-    }
-    
-    reloadKnob.style.transform = `translate(${reloadJoystick.moveX * joystickRadius}px, ${reloadJoystick.moveY * joystickRadius}px)`;
-}
-
 function gameLoop() {
-    if (gameState === 'playing') {
-        movePlayer();
-        createPlayerBullet();
-        createEnemyBullets();
-        updateBullets();
-        checkCollisions();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 무적 타이머 업데이트
-        if (player.invincible) {
-            player.invincibleTimer--;
-            if (player.invincibleTimer <= 0) {
-                player.invincible = false;
-            }
-        }
-        if (player.spaceInvincible) {
-            player.spaceInvincibleTimer--;
-            if (player.spaceInvincibleTimer <= 0) {
-                player.spaceInvincible = false;
-            }
-        }
+    if (gameState === 'start') {
+        drawStartScreen();
+    } else if (gameState === 'colorSelect') {
+        drawColorSelect();
+    } else if (gameState === 'playing') {
+        updateGame();
+        drawGame();
+    } else if (gameState === 'gameOver') {
+        drawGameOver();
     }
 
-    draw();
     requestAnimationFrame(gameLoop);
 }
 
-// 게임 루프 시작
-gameLoop();
-
-// 게임 루프 시작
-gameLoop();
-
 // 게임 시작
 gameLoop();
+
+
+function updateEnemyPattern() {
+    enemy.patternTimer++;
+
+    if (enemy.health <= 0) {
+        gameState = 'gameOver';
+        gameOver = true;
+        endTime = Date.now();
+        return;
+    }
+
+    // 패턴 변경
+    if (enemy.patternTimer >= 180) { // 3초마다 패턴 변경
+        enemy.pattern = (enemy.pattern + 1) % 3;
+        enemy.patternTimer = 0;
+    }
+
+    // 패턴별 동작
+    switch(enemy.pattern) {
+        case 0: // 원형 탄막
+            if (enemy.patternTimer % 15 === 0) { // 0.25초마다 발사
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 * i / 8) + (enemy.patternTimer * 0.1);
+                    createEnemyBullet(angle);
+                }
+            }
+            break;
+
+        case 1: // 나선형 탄막
+            if (enemy.patternTimer % 5 === 0) { // 더 빠른 발사
+                enemy.fireAngle += 0.3;
+                createEnemyBullet(enemy.fireAngle);
+            }
+            break;
+
+        case 2: // 조준 탄막
+            if (enemy.patternTimer % 30 === 0) { // 0.5초마다 발사
+                const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                for (let i = -1; i <= 1; i++) {
+                    createEnemyBullet(angle + i * 0.2);
+                }
+            }
+            break;
+    }
+}
+
+function createEnemyBullet(angle) {
+    enemyBullets.push({
+        x: enemy.x,
+        y: enemy.y,
+        dx: Math.cos(angle),
+        dy: Math.sin(angle),
+        speed: 5
+    });
+}
+
+// updateGame 함수 수정
+function updateGame() {
+    // 플레이어 이동
+    if (platform === 'pc') {
+        if (keys['ArrowLeft'] || keys['a']) player.x = Math.max(player.width/2, player.x - player.speed);
+        if (keys['ArrowRight'] || keys['d']) player.x = Math.min(canvas.width - player.width/2, player.x + player.speed);
+        if (keys['ArrowUp'] || keys['w']) player.y = Math.max(player.height/2, player.y - player.speed);
+        if (keys['ArrowDown'] || keys['s']) player.y = Math.min(canvas.height - player.height/2, player.y + player.speed);
+    } else if (platform === 'mobile' && moveJoystick.active) {
+        player.x = Math.max(player.width/2, Math.min(canvas.width - player.width/2, 
+            player.x + moveJoystick.moveX * player.speed));
+        player.y = Math.max(player.height/2, Math.min(canvas.height - player.height/2, 
+            player.y + moveJoystick.moveY * player.speed));
+    }
+
+    // 탄막 생성
+    if (platform === 'pc' && keys[' '] && !player.reloading && player.ammo > 0) {
+        createBullet();
+    } else if (platform === 'mobile' && shootJoystick.active && !player.reloading && player.ammo > 0) {
+        createBullet();
+    }
+
+    // 적 패턴 업데이트
+    updateEnemyPattern();
+
+    // 탄막 업데이트
+    bullets = bullets.filter(bullet => {
+        bullet.x += bullet.dx * bullet.speed;
+        bullet.y += bullet.dy * bullet.speed;
+        return bullet.x >= 0 && bullet.x <= canvas.width && 
+               bullet.y >= 0 && bullet.y <= canvas.height;
+    });
+
+    enemyBullets = enemyBullets.filter(bullet => {
+        bullet.x += bullet.dx * bullet.speed;
+        bullet.y += bullet.dy * bullet.speed;
+        return bullet.x >= 0 && bullet.x <= canvas.width && 
+               bullet.y >= 0 && bullet.y <= canvas.height;
+    });
+
+    // 무적 타이머 업데이트
+    if (player.invincible) {
+        player.invincibleTimer--;
+        if (player.invincibleTimer <= 0) {
+            player.invincible = false;
+        }
+    }
+    if (player.spaceInvincible) {
+        player.spaceInvincibleTimer--;
+        if (player.spaceInvincibleTimer <= 0) {
+            player.spaceInvincible = false;
+        }
+    }
+
+    // 충돌 체크
+    checkCollisions();
+
+    // 게임 오버 체크
+    if (player.health <= 0) {
+        gameState = 'gameOver';
+        gameOver = true;
+        endTime = Date.now();
+    }
+}
+
+function createBullet() {
+    if (Date.now() - player.lastShotTime > 250) { // 발사 속도 제한
+        const angle = Math.atan2(player.direction.y, player.direction.x);
+        bullets.push({
+            x: player.x,
+            y: player.y,
+            dx: Math.cos(angle),
+            dy: Math.sin(angle),
+            speed: 10
+        });
+        player.ammo--;
+        player.shotCount++;
+        player.lastShotTime = Date.now();
+    }
+}
+
+function checkCollisions() {
+    // 플레이어와 적 탄막의 충돌
+    if (!player.invincible && !player.spaceInvincible) {
+        enemyBullets.forEach((bullet, index) => {
+            if (distance(bullet.x, bullet.y, player.x, player.y) < 20) {
+                player.health--;
+                player.invincible = true;
+                player.invincibleTimer = 60;
+                enemyBullets.splice(index, 1);
+            }
+        });
+    }
+
+    // 플레이어 탄막과 적의 충돌
+    bullets.forEach((bullet, index) => {
+        if (distance(bullet.x, bullet.y, enemy.x, enemy.y) < 25) {
+            enemy.health--;
+            bullets.splice(index, 1);
+        }
+    });
+}
+
+function distance(x1, y1, x2, y2) {
+    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+}
