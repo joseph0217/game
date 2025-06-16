@@ -253,12 +253,31 @@ canvas.addEventListener('touchstart', (e) => {
 });
 
 function drawStartScreen() {
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     if (startImage1Loaded && startImage2Loaded) {
         ctx.drawImage(startImage1, 0, 0, canvas.width, canvas.height);
         if (Date.now() % 1000 < 500) {
             ctx.drawImage(startImage2, 0, 0, canvas.width, canvas.height);
         }
     }
+
+    ctx.font = '30px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText('← 모바일   PC →', canvas.width / 2, canvas.height - 100);
+}
+
+function drawPlatformSelect() {
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = '30px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText('선택된 플랫폼: ' + platform, canvas.width / 2, canvas.height / 2 - 50);
+    ctx.fillText('Enter를 눌러 계속하기', canvas.width / 2, canvas.height / 2 + 50);
 }
 
 function drawColorSelect() {
@@ -520,6 +539,8 @@ function gameLoop() {
 
     if (gameState === 'start') {
         drawStartScreen();
+    } else if (gameState === 'platformSelect') {
+        drawPlatformSelect();
     } else if (gameState === 'colorSelect') {
         drawColorSelect();
     } else if (gameState === 'playing') {
